@@ -5,13 +5,13 @@ COMPOSE_FILE="docker/docker-compose.yml"
 
 case "$1" in
   up)
-    docker compose -f "$COMPOSE_FILE" up -d
+    docker compose -f "$COMPOSE_FILE" up -d "${@:2}"
     ;;
   down)
-    docker compose -f "$COMPOSE_FILE" down
+    docker compose -f "$COMPOSE_FILE" down "${@:2}"
     ;;
   restart)
-    docker compose -f "$COMPOSE_FILE" restart
+    docker compose -f "$COMPOSE_FILE" restart "${@:2}"
     ;;
   logs)
     docker compose -f "$COMPOSE_FILE" logs -f "${@:2}"
@@ -21,6 +21,23 @@ case "$1" in
     ;;
   artisan)
     docker compose -f "$COMPOSE_FILE" exec app php artisan "${@:2}"
+    ;;
+  setup)
+    echo "Compilando e iniciando os serviços..."
+    docker compose -f "$COMPOSE_FILE" up -d --build
+    
+    echo "Aguardando o container core_app iniciar..."
+    until [ "$(docker inspect -f '{{.State.Running}}' core_app 2>/dev/null)" = "true" ]; do
+        sleep 1
+    done
+    
+    echo "Gerando chave da aplicação..."
+    docker compose -f "$COMPOSE_FILE" exec app php artisan key:generate --ansi
+    
+    echo "Executando migrações do banco de dados..."
+    docker compose -f "$COMPOSE_FILE" exec app php artisan migrate --force
+    
+    echo "Configuração completa!"
     ;;
   *)
     # fallback: pass through anything else straight to compose

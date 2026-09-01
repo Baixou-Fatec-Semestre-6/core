@@ -1,23 +1,52 @@
-**Core**
-Camada core do projeto de rastreamento de preços (BAIXOU).
+# Core — Baixou
 
-**Pré-requisitos**
+Camada core do sistema de rastreamento de preços.
 
-* Docker
-* Docker Compose
+## Pré-requisitos
 
-**Gerenciamento via Script (`bin/dev`)**
-Para facilitar o dia a dia, utilize o script de automação integrado (torne-o executável uma única vez com `chmod +x bin/dev`):
+* [Docker](https://docs.docker.com/get-docker/)
+* [Docker Compose](https://docs.docker.com/compose/install/)
 
-* `./bin/dev up` — Subir os serviços em background
-* `./bin/dev down` — Parar e remover os containers
-* `./bin/dev restart` — Reiniciar os serviços
-* `./bin/dev logs` — Acompanhar os logs em tempo real
-* `./bin/dev sh` — Abrir o shell interativo no container `app`
-* `./bin/dev artisan <comando>` — Executar comandos do Laravel Artisan (ex: `./bin/dev artisan migrate`)
+---
 
-**Comandos Manuais (Docker Compose)**
-Caso prefira interagir diretamente com o compose sem o script:
+## Como Executar
+
+Para iniciar rapidamente, use o comando de setup após clonar o repositório:
+
+1. Torne o script de gerenciamento executável (necessário apenas na primeira vez):
+```bash
+chmod +x bin/dev
+
+```
+
+
+2. Execute a rotina completa de setup:
+```bash
+./bin/dev setup
+
+```
+
+
+
+---
+
+## Gerenciamento via Script (`bin/dev`)
+
+O projeto conta com um script de automação (`bin/dev`) para facilitar o fluxo de desenvolvimento:
+
+* `./bin/dev setup` — Executa o build, sobe os containers, gera o `APP_KEY` e roda as migrações
+* `./bin/dev up` — Sobe os serviços em background
+* `./bin/dev down` — Para e remove os containers (use `./bin/dev down -v` para descartar o volume do banco de dados)
+* `./bin/dev restart` — Reinicia os serviços
+* `./bin/dev logs` — Acompanha os logs em tempo real
+* `./bin/dev sh` — Abre o shell interativo no container da aplicação
+* `./bin/dev artisan <comando>` — Executa comandos do Laravel Artisan (ex: `./bin/dev artisan migrate`)
+
+---
+
+## Comandos Manuais (Docker Compose)
+
+Caso prefira interagir diretamente com o compose sem o script auxiliar:
 
 ```bash
 # Subir serviços
