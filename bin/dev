@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -e
+
+COMPOSE_FILE="docker/docker-compose.yml"
+
+case "$1" in
+  up)
+    docker compose -f "$COMPOSE_FILE" up -d
+    ;;
+  down)
+    docker compose -f "$COMPOSE_FILE" down
+    ;;
+  restart)
+    docker compose -f "$COMPOSE_FILE" restart
+    ;;
+  logs)
+    docker compose -f "$COMPOSE_FILE" logs -f "${@:2}"
+    ;;
+  sh)
+    docker compose -f "$COMPOSE_FILE" exec app sh
+    ;;
+  artisan)
+    docker compose -f "$COMPOSE_FILE" exec app php artisan "${@:2}"
+    ;;
+  *)
+    # fallback: pass through anything else straight to compose
+    docker compose -f "$COMPOSE_FILE" "$@"
+    ;;
+esac
