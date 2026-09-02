@@ -6,17 +6,20 @@ use App\Enums\VerificationType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class VerificationCode extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
-        'code',
+        'code_hash',
         'type',
         'expires_at',
         'attempts',
+        'used_at',
+        'token',
     ];
 
     protected function casts(): array
@@ -24,6 +27,7 @@ class VerificationCode extends Model
         return [
             'type' => VerificationType::class,
             'expires_at' => 'datetime',
+            'used_at' => 'datetime',
             'attempts' => 'integer',
         ];
     }
@@ -31,5 +35,12 @@ class VerificationCode extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function isValid(): bool
+    {
+        return $this->used_at === null
+            && $this->expires_at->isFuture()
+            && $this->attempts < 3;
     }
 }

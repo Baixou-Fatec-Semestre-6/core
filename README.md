@@ -26,10 +26,6 @@ chmod +x bin/dev
 
 ```
 
-
-
----
-
 ## Gerenciamento via Script (`bin/dev`)
 
 O projeto conta com um script de automação (`bin/dev`) para facilitar o fluxo de desenvolvimento:
@@ -59,3 +55,30 @@ docker compose -f docker/docker-compose.yml down
 docker compose -f docker/docker-compose.yml logs -f
 
 ```
+
+
+---
+
+## Documentação da API
+
+A documentação dos endpoints da API é gerada automaticamente pelo Scramble.
+
+Acesse:
+
+```text
+http://localhost:8000/docs/api
+```
+
+---
+
+## E-mails
+
+O ambiente de desenvolvimento utiliza Mailpit para visualizar os e-mails enviados pela aplicação.
+
+Acesse:
+
+```text
+http://localhost:8025
+```
+
+---

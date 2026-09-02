@@ -49,6 +49,7 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'status' => UserStatus::class,
             'email_verified_at' => 'datetime',
+            'deleted_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -56,7 +57,7 @@ class User extends Authenticatable
     /**
      * Get the user's verification codes.
      *
-     * @return HasMany
+     * @return HasMany<VerificationCode, User>
      */
     public function verificationCodes(): HasMany
     {

@@ -1,33 +1,44 @@
+x-shared-app: &shared-app
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+  working_dir: /var/www
+  environment:
+    - DB_CONNECTION=${DB_CONNECTION:-pgsql}
+    - DB_HOST=${DB_HOST:-postgres}
+    - DB_PORT=${DB_PORT:-5432}
+    - DB_DATABASE=${DB_DATABASE:-baixou}
+    - DB_USERNAME=${DB_USERNAME:-dev}
+    - DB_PASSWORD=${DB_PASSWORD:-123}
+    - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+    - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+    - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+    - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
+  volumes:
+    - ../:/var/www
+  networks:
+    - core
+  depends_on:
+    - postgres
+    - rabbitmq
+
 services:
   app:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    <<: *shared-app
     container_name: core_app
-    restart: no
-    working_dir: /var/www
-    environment:
-      - DB_CONNECTION=${DB_CONNECTION:-pgsql}
-      - DB_HOST=${DB_HOST:-postgres}
-      - DB_PORT=${DB_PORT:-5432}
-      - DB_DATABASE=${DB_DATABASE:-baixou}
-      - DB_USERNAME=${DB_USERNAME:-dev}
-      - DB_PASSWORD=${DB_PASSWORD:-123}
-      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
+    restart: unless-stopped
     volumes:
       - ../:/var/www
       - ./php-fpm/zz-docker.conf:/usr/local/etc/php-fpm.d/zz-docker.conf
       - ./php-fpm/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    networks:
-      - core
-    depends_on:
-      - postgres
-      - rabbitmq
+
+  queue-worker:
+    <<: *shared-app
+    container_name: core_queue_worker
+    restart: unless-stopped
+    command: php artisan queue:work --tries=3 --timeout=90
 
   nginx:
     image: nginx:alpine
@@ -70,6 +81,16 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - core
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: core_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
     networks:
       - core
 
