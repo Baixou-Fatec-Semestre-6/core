@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Api;
 
 use App\Models\User;
 use App\Models\VerificationCode;
@@ -83,7 +83,7 @@ class AuthService
             ]);
         }
 
-        if (empty($user->email_verified_at)) {
+        if ($user->status === UserStatus::PENDING) {
             throw ValidationException::withMessages([
                 'email' => ['Sua conta ainda não foi ativada. Verifique seu e-mail.'],
             ]);
@@ -263,7 +263,11 @@ class AuthService
             $user = $verification->user;
 
             // Atualizar senha do usuário
-            $user->password = bcrypt($data['password']);
+            $user->password = $data['password'];
+            if ($user->status === UserStatus::PENDING) {
+                $user->email_verified_at = Carbon::now();
+                $user->status = UserStatus::ACTIVE;
+            }
             $user->save();
 
             // Marcar verificação como usada

@@ -36,6 +36,9 @@ case "$1" in
     
     echo "Executando migrações do banco de dados..."
     docker compose -f "$COMPOSE_FILE" exec app php artisan migrate --force
+
+    echo "Executando seeders..."
+    docker compose -f "$COMPOSE_FILE" exec app php artisan db:seed
     
     echo "Configuração completa!"
     ;;

@@ -1,17 +1,18 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
-use App\Services\AuthService;
+use App\Services\Api\AuthService;
 use Illuminate\Http\JsonResponse;
-use App\Http\Requests\RegisterUserRequest;
-use App\Http\Requests\LoginRequest;
-use App\Http\Requests\ActivateAccountRequest;
-use App\Http\Requests\ForgotPasswordRequest;
-use App\Http\Requests\VerifyResetCodeRequest;
-use App\Http\Requests\ResetPasswordRequest;
+use App\Http\Requests\Api\RegisterUserRequest;
+use App\Http\Requests\Api\LoginRequest;
+use App\Http\Requests\Api\ActivateAccountRequest;
+use App\Http\Requests\Api\ForgotPasswordRequest;
+use App\Http\Requests\Api\VerifyResetCodeRequest;
+use App\Http\Requests\Api\ResetPasswordRequest;
 use Illuminate\Http\Request;
 use App\Http\Resources\UserResource;
+use \App\Http\Controllers\Controller;
 
 class AuthController extends Controller
 {
