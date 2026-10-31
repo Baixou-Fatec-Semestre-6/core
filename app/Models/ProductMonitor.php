@@ -24,6 +24,7 @@ class ProductMonitor extends Model
         'currency',
         'notification_channel',
         'status',
+        'last_error_reason',
     ];
 
     protected function casts(): array

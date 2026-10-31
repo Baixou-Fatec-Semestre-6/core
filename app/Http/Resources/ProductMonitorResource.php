@@ -17,6 +17,7 @@ class ProductMonitorResource extends JsonResource
         return [
             'id' => $this->id,
             'status' => $this->status,
+            'last_error_reason' => $this->last_error_reason,
             'target_price' => $this->target_price,
             'currency' => $this->currency,
             'notification_channel' => $this->notification_channel,
