@@ -19,9 +19,10 @@ return new class extends Migration
             $table->decimal('current_price', 10, 2);
             $table->string('currency');
             $table->timestamp('last_scraped_at')->nullable();
-            $table->string('last_scrape_status')->nullable();
-            $table->string('last_scrape_error')->nullable();
+            $table->string('status')->default('pending');
+            $table->string('last_error_reason', 255)->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

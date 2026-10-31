@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use App\Enums\NotificationChannel;
 
 return new class extends Migration
 {
@@ -13,14 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('product_monitors', function (Blueprint $table) {
-            $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('product_id')->constrained('products');
-            $table->foreignId('listing_id')->constrained('product_listings');
-            $table->decimal('target_price', 10, 2);
-            $table->string('currency');
-            $table->string('notification_channel')->default(NotificationChannel::ALL->value);
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
             $table->timestamps();
-            $table->softDeletes();
+            $table->unique(['user_id', 'product_id']);
         });
     }
 
@@ -32,7 +28,6 @@ return new class extends Migration
         Schema::table('product_monitors', function (Blueprint $table) {
             $table->dropForeign(['user_id']);
             $table->dropForeign(['product_id']);
-            $table->dropForeign(['listing_id']);
         });
         Schema::dropIfExists('product_monitors');
     }

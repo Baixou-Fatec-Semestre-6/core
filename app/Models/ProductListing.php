@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProductListingStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,6 +12,10 @@ class ProductListing extends Model
 {
     use SoftDeletes;
 
+    protected $attributes = [
+        'status' => ProductListingStatus::PENDING->value,
+    ];
+
     protected $fillable = [
         'product_id',
         'store',
@@ -18,8 +23,8 @@ class ProductListing extends Model
         'current_price',
         'currency',
         'last_scraped_at',
-        'last_scrape_status',
-        'last_scrape_error',
+        'status',
+        'last_error_reason',
     ];
 
     protected function casts(): array
@@ -27,6 +32,7 @@ class ProductListing extends Model
         return [
             'current_price' => 'decimal:2',
             'last_scraped_at' => 'datetime',
+            'status' => ProductListingStatus::class,
         ];
     }
 
@@ -38,10 +44,5 @@ class ProductListing extends Model
     public function priceHistories(): HasMany
     {
         return $this->hasMany(PriceHistory::class, 'listing_id');
-    }
-
-    public function monitors(): HasMany
-    {
-        return $this->hasMany(ProductMonitor::class, 'listing_id');
     }
 }

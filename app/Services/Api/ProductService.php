@@ -44,34 +44,22 @@ class ProductService
     }
 
     /**
-     * Start monitoring every active listing for a product.
+     * Start monitoring a product for a user.
      */
     public function track(int $productId, User $user): Product
     {
-        return DB::transaction(function () use ($productId, $user): Product {
-            $product = Product::findOrFail($productId);
+        $product = Product::findOrFail($productId);
 
-            foreach ($product->listings as $listing) {
-                $listing->monitors()->firstOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'product_id' => $product->id,
-                    ],
-                    [
-                        'target_price' => $listing->current_price,
-                        'currency' => $listing->currency,
-                    ],
-                );
-            }
+        $product->monitors()->firstOrCreate(['user_id' => $user->id]);
 
-            return $product->load([
-                'listings.monitors' => fn ($query) => $query->where('user_id', $user->id),
-            ]);
-        });
+        return $product->load([
+            'listings',
+            'monitors' => fn ($query) => $query->where('user_id', $user->id),
+        ]);
     }
 
     /**
-     * Stop monitoring a product and its listings.
+     * Stop monitoring a product for a user.
      */
     public function untrack(int $productId, User $user): void
     {

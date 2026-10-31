@@ -19,6 +19,10 @@ class ProductResource extends JsonResource
             'name' => $this->name,
             'image_url' => $this->image_url,
             'listings' => ListingResource::collection($this->whenLoaded('listings')),
+            'monitor' => $this->when(
+                $this->relationLoaded('monitors'),
+                fn () => ProductMonitorResource::make($this->monitors->first()),
+            ),
         ];
     }
 }

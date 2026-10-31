@@ -65,6 +65,16 @@ class User extends Authenticatable
         return $this->hasMany(VerificationCode::class);
     }
 
+    /**
+     * Get the product monitors for the user.
+     *
+     * @return HasMany<ProductMonitor, User>
+     */
+    public function productMonitors(): HasMany
+    {
+        return $this->hasMany(ProductMonitor::class);
+    }
+
 
     /**
      * Check if the user is an admin.
