@@ -20,6 +20,7 @@ class ListingResource extends JsonResource
             'url' => $this->url,
             'current_price' => $this->current_price,
             'currency' => $this->currency,
+            'monitors' => ProductMonitorResource::collection($this->whenLoaded('monitors')),
             'last_scrape_at' => $this->last_scrape_at,
             'history' => PriceHistoryResource::collection($this->whenLoaded('priceHistories')),
             'min_price' => round($this->priceHistories?->min('price'), 2),

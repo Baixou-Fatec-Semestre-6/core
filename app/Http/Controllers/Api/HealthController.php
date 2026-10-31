@@ -15,8 +15,10 @@ class HealthController extends Controller
     public function show(): JsonResponse
     {
         return response()->json([
-            'status' => 'ok',
-            'service' => 'baixou-api',
+            'data' => [
+                'status' => 'ok',
+                'service' => 'baixou-api',
+            ],
         ]);
     }
 }

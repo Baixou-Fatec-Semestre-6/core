@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\ProductController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'show']);
@@ -23,11 +23,11 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('products')->group(function () {
-        Route::get('/', [ProductController::class, 'index']);
+        Route::get('/catalog', [ProductController::class, 'index']);
+        Route::post('/', [ProductController::class, 'track']);
         Route::get('/{id}/price-history', [ProductController::class, 'priceHistory']);
     });
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\NotificationChannel;
+use App\Enums\ProductMonitorStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,6 +12,10 @@ class ProductMonitor extends Model
 {
     use SoftDeletes;
 
+    protected $attributes = [
+        'status' => ProductMonitorStatus::PENDING->value,
+    ];
+
     protected $fillable = [
         'user_id',
         'product_id',
@@ -18,6 +23,7 @@ class ProductMonitor extends Model
         'target_price',
         'currency',
         'notification_channel',
+        'status',
     ];
 
     protected function casts(): array
@@ -25,6 +31,7 @@ class ProductMonitor extends Model
         return [
             'target_price' => 'decimal:2',
             'notification_channel' => NotificationChannel::class,
+            'status' => ProductMonitorStatus::class,
         ];
     }
 

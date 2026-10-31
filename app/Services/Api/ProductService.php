@@ -3,7 +3,9 @@
 namespace App\Services\Api;
 
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class ProductService
 {
@@ -31,5 +33,32 @@ class ProductService
         return Product::with(['listings.priceHistories' => function ($query) use ($cutoffDate) {
             $query->where('scraped_at', '>=', $cutoffDate)->orderBy('scraped_at');
         }])->findOrFail($productId);
+    }
+
+    /**
+     * Start monitoring every active listing for a product.
+     */
+    public function track(int $productId, User $user): Product
+    {
+        return DB::transaction(function () use ($productId, $user): Product {
+            $product = Product::findOrFail($productId);
+
+            foreach ($product->listings as $listing) {
+                $listing->monitors()->firstOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'product_id' => $product->id,
+                    ],
+                    [
+                        'target_price' => $listing->current_price,
+                        'currency' => $listing->currency,
+                    ],
+                );
+            }
+
+            return $product->load([
+                'listings.monitors' => fn ($query) => $query->where('user_id', $user->id),
+            ]);
+        });
     }
 }
