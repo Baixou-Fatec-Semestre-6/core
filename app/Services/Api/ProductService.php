@@ -4,11 +4,14 @@ namespace App\Services\Api;
 
 use App\Models\Product;
 use App\Models\User;
+use App\Services\ScrapeDispatcher;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class ProductService
 {
+    public function __construct(private readonly ScrapeDispatcher $scrapeDispatcher) {}
+
     /**
      * Get all products with optional search filter and pagination.
      */
@@ -58,6 +61,11 @@ class ProductService
         $product = Product::findOrFail($productId);
 
         $product->monitors()->firstOrCreate(['user_id' => $user->id]);
+
+        // Request a scrape for each listing of the product
+        foreach ($product->listings as $listing) {
+            $this->scrapeDispatcher->requestIfDue($listing);
+        }
 
         return $product->load([
             'listings',

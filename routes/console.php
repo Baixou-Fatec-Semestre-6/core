@@ -1,8 +1,13 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+use App\Services\ScrapeDispatcher;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+// Artisan::command('inspire', function () {
+//     $this->comment(Inspiring::quote());
+// })->purpose('Display an inspiring quote');
+
+Schedule::call(fn () => app(ScrapeDispatcher::class)->dispatchDue())
+    ->name('scrape-dispatch')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();

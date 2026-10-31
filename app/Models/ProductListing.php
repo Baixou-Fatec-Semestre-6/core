@@ -32,6 +32,7 @@ class ProductListing extends Model
         return [
             'current_price' => 'decimal:2',
             'last_scraped_at' => 'datetime',
+            'scrape_requested_at' => 'datetime',
             'status' => ProductListingStatus::class,
         ];
     }

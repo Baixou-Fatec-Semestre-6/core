@@ -1,0 +1,60 @@
+{
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "baixou",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "scraper.requests",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "core.scrape.results",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "baixou",
+      "vhost": "/",
+      "destination": "scraper.requests",
+      "destination_type": "queue",
+      "routing_key": "scrape.requested",
+      "arguments": {}
+    },
+    {
+      "source": "baixou",
+      "vhost": "/",
+      "destination": "core.scrape.results",
+      "destination_type": "queue",
+      "routing_key": "scrape.completed",
+      "arguments": {}
+    },
+    {
+      "source": "baixou",
+      "vhost": "/",
+      "destination": "core.scrape.results",
+      "destination_type": "queue",
+      "routing_key": "scrape.failed",
+      "arguments": {}
+    }
+  ]
+}

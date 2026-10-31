@@ -8,6 +8,7 @@ use App\Models\Alert;
 use App\Models\PriceNotification;
 use App\Models\ProductListing;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 /**
  * Records listing prices and evaluates product price alerts.
@@ -26,7 +27,11 @@ class PriceService
             ->whereNotNull('current_price')
             ->firstOrFail();
 
-        $this->recordPrice($listing, round($listing->current_price * 0.95, 2)); // 5% drop
+        $this->recordPrice(
+            $listing,
+            round($listing->current_price * 0.95, 2), // 5% drop
+            Carbon::now()
+        );
     }
 
     /**
@@ -35,16 +40,16 @@ class PriceService
      * @param  ProductListing  $listing  Listing whose price was scraped.
      * @param  float  $newPrice  Newly scraped price.
      */
-    public function recordPrice(ProductListing $listing, float $newPrice): void
+    public function recordPrice(ProductListing $listing, float $newPrice, Carbon $scrapedAt): void
     {
-        DB::transaction(function () use ($listing, $newPrice): void {
+        DB::transaction(function () use ($listing, $newPrice, $scrapedAt): void {
             $previousLowest = $this->lowestPrice($listing->product_id);
 
             $listing->update([
                 'current_price' => $newPrice,
                 'status' => ProductListingStatus::SCRAPED,
                 'last_error_reason' => null,
-                'last_scraped_at' => now(),
+                'last_scraped_at' => $scrapedAt,
             ]);
 
             $listing->priceHistories()->create([
@@ -57,6 +62,22 @@ class PriceService
 
             $this->evaluateAlerts($listing->product_id, $previousLowest, $newLowest);
         });
+    }
+
+    /**
+     * Mark a listing as failed after an unsuccessful scrape.
+     *
+     * @param ProductListing $listing Listing that failed to scrape.
+     * @param string $reason Why the scrape failed.
+     * @param Carbon $scrapedAt When the attempt happened.
+     */
+    public function recordFailure(ProductListing $listing, string $reason, Carbon $scrapedAt): void
+    {
+        $listing->update([
+            'status' => ProductListingStatus::FAILED,
+            'last_error_reason' => $reason,
+            'last_scraped_at' => $scrapedAt,
+        ]);
     }
 
     /**

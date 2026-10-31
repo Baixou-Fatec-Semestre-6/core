@@ -12,8 +12,9 @@ x-shared-app: &shared-app
     - DB_PASSWORD=${DB_PASSWORD:-123}
     - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
     - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-    - RABBITMQ_USER=${RABBITMQ_USER:-guest}
-    - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
+    - RABBITMQ_USER=${RABBITMQ_USER:-baixou_app}
+    - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-local_dev_password}
+    - LOG_CHANNEL=stderr
   volumes:
     - ../:/var/www
   networks:
@@ -33,12 +34,37 @@ services:
       - ./php-fpm/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_started
+      rabbitmq-definitions:
+        condition: service_completed_successfully
 
   queue-worker:
     <<: *shared-app
     container_name: core_queue_worker
     restart: unless-stopped
-    command: php artisan queue:work --tries=3 --timeout=90
+    command: php artisan queue:work --tries=3 --timeout=90 --max-time=3600
+    depends_on:
+      - postgres
+
+  scheduler:
+    <<: *shared-app
+    container_name: core_scheduler
+    restart: unless-stopped
+    command: php artisan schedule:work
+    depends_on:
+      rabbitmq-definitions:
+        condition: service_completed_successfully
+
+  rabbitmq-consumer:
+    <<: *shared-app
+    container_name: core_rabbitmq_consumer
+    restart: unless-stopped
+    command: php artisan app:consume-scrape-results
+    depends_on:
+      rabbitmq-definitions:
+        condition: service_completed_successfully
 
   nginx:
     image: nginx:alpine
@@ -77,13 +103,45 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-baixou_app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-local_dev_password}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     networks:
       - core
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
+  # load the RabbitMQ definitions after the service is healthy
+  rabbitmq-definitions:
+    image: curlimages/curl:8.10.1
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-baixou_app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-local_dev_password}
+    volumes:
+      - ./rabbitmq/definitions.json:/definitions.json:ro
+    networks:
+      - core
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - >-
+        curl --fail --silent --show-error
+        --retry 30 --retry-all-errors --retry-delay 2 --retry-max-time 120
+        --user "$${RABBITMQ_DEFAULT_USER}:$${RABBITMQ_DEFAULT_PASS}"
+        -H "Content-Type: application/json"
+        -X POST
+        --data-binary @/definitions.json
+        http://rabbitmq:15672/api/definitions
+
+  # Mailpit service for capturing emails sent by the application during development
   mailpit:
     image: axllent/mailpit:latest
     container_name: core_mailpit
