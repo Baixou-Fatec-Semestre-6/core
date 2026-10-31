@@ -20,6 +20,7 @@ return new class extends Migration
             $table->decimal('target_price', 10, 2);
             $table->string('notification_channel')
                 ->default(NotificationChannel::ALL->value);
+            $table->timestamp('triggered_at')->nullable();
             $table->timestamps();
         });
     }

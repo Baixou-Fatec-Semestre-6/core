@@ -8,14 +8,17 @@ use App\Http\Requests\Api\ProductPriceHistoryRequest;
 use App\Http\Requests\Api\TrackProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Services\Api\ProductService;
+use App\Services\PriceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ProductController extends Controller
 {
-    public function __construct(private ProductService $productService)
-    {
+    public function __construct(
+        private readonly ProductService $productService,
+        private readonly PriceService $priceService,
+    ) {
         //
     }
 
@@ -78,5 +81,23 @@ class ProductController extends Controller
         $this->productService->untrack($id, $request->user());
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Simulate a price drop  (demo only).
+     * 
+     * Lowers the product price by 5% and sends e-mail and push notifications to all users tracking it.
+     * 
+     * @tags Demo
+     */
+    public function simulatePriceDrop(Request $request, int $id): ProductResource
+    {
+        abort_unless(config('app.demo_endpoints'), 404);
+
+        $this->priceService->simulatePriceDrop($id);
+
+        return new ProductResource(
+            $this->productService->getById($id)
+        );
     }
 }

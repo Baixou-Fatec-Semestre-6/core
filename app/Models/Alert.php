@@ -16,6 +16,7 @@ class Alert extends Model
         'product_monitor_id',
         'target_price',
         'notification_channel',
+        'triggered_at'
     ];
 
     protected function casts(): array
@@ -23,6 +24,7 @@ class Alert extends Model
         return [
             'target_price' => 'decimal:2',
             'notification_channel' => NotificationChannel::class,
+            'triggered_at' => 'datetime',
         ];
     }
 

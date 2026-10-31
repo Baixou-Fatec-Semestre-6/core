@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [ProductController::class, 'show']);
         Route::delete('/{id}', [ProductController::class, 'untrack']);
         Route::get('/{id}/price-history', [ProductController::class, 'priceHistory']);
+        Route::post('/{id}/simulate-price-drop', [ProductController::class, 'simulatePriceDrop']);
     });
 
 });

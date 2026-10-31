@@ -123,4 +123,14 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom configurations
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify custom configurations for your application.
+    |
+    */
+    'demo_endpoints' => env('APP_DEMO_ENDPOINTS', true),
 ];
