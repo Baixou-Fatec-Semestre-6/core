@@ -16,7 +16,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens, CanResetPassword;
+    use CanResetPassword, HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -75,15 +75,21 @@ class User extends Authenticatable
         return $this->hasMany(ProductMonitor::class);
     }
 
+    /**
+     * Get the user's price notifications.
+     *
+     * @return HasMany<PriceNotification, User>
+     */
+    public function priceNotifications(): HasMany
+    {
+        return $this->hasMany(PriceNotification::class);
+    }
 
     /**
      * Check if the user is an admin.
-     *
-     * @return bool
      */
     public function isAdmin(): bool
     {
         return \in_array($this->role, [UserRole::ADMIN, UserRole::SUPER_ADMIN]);
     }
-
 }
