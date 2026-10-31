@@ -9,6 +9,7 @@ use App\Http\Requests\Api\TrackProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Services\Api\ProductService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ProductController extends Controller
@@ -27,6 +28,16 @@ class ProductController extends Controller
         $products = $this->productService->getAll($request->query('q'), $perPage);
 
         return ProductResource::collection($products);
+    }
+
+    /**
+     * Show a specific product by ID.
+     */
+    public function show(int $id): ProductResource
+    {
+        $product = $this->productService->getById($id);
+
+        return new ProductResource($product);
     }
 
     /**
@@ -52,5 +63,15 @@ class ProductController extends Controller
         return (new ProductResource($product))
             ->response()
             ->setStatusCode(201);
+    }
+
+    /**
+     * Stop monitoring a product and its listings.
+     */
+    public function untrack(Request $request, int $id): JsonResponse
+    {
+        $this->productService->untrack($id, $request->user());
+
+        return response()->json(null, 204);
     }
 }

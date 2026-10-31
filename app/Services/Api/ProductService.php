@@ -24,6 +24,14 @@ class ProductService
     }
 
     /**
+     * Get a specific product by ID.
+     */
+    public function getById(int $productId): Product
+    {
+        return Product::with('listings')->findOrFail($productId);
+    }
+
+    /**
      * Get price history for a specific product.
      */
     public function getPriceHistory(int $productId, int $periodDays = 90): Product
@@ -59,6 +67,19 @@ class ProductService
             return $product->load([
                 'listings.monitors' => fn ($query) => $query->where('user_id', $user->id),
             ]);
+        });
+    }
+
+    /**
+     * Stop monitoring a product and its listings.
+     */
+    public function untrack(int $productId, User $user): void
+    {
+        DB::transaction(function () use ($productId, $user): void {
+            Product::findOrFail($productId)
+                ->monitors()
+                ->where('user_id', $user->id)
+                ->delete();
         });
     }
 }

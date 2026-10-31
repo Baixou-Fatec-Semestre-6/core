@@ -28,6 +28,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('products')->group(function () {
         Route::get('/catalog', [ProductController::class, 'index']);
         Route::post('/', [ProductController::class, 'track']);
+        Route::get('/{id}', [ProductController::class, 'show']);
+        Route::delete('/{id}', [ProductController::class, 'untrack']);
         Route::get('/{id}/price-history', [ProductController::class, 'priceHistory']);
     });
 
