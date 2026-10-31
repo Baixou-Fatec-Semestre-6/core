@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ProductController;
@@ -24,6 +25,7 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('alerts', AlertController::class)->only(['index', 'store', 'destroy']);
 
     Route::prefix('products')->group(function () {
         Route::get('/catalog', [ProductController::class, 'index']);

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductMonitor extends Model
 {
@@ -20,5 +21,11 @@ class ProductMonitor extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /** @return HasMany<Alert, $this> */
+    public function alerts(): HasMany
+    {
+        return $this->hasMany(Alert::class)->chaperone('productMonitor');
     }
 }
