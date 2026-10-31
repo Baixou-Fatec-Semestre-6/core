@@ -16,7 +16,7 @@ class AlertResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            // 'user_id' => $this->productMonitor->user_id,
+            'user_id' => $this->productMonitor->user_id,
             'product_id' => $this->productMonitor->product_id,
             'product_monitor_id' => $this->product_monitor_id,
             'target_price' => $this->target_price,

@@ -14,11 +14,13 @@ return new class extends Migration
         Schema::create('price_notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->decimal('old_price', 10, 2)->nullable();
             $table->decimal('new_price', 10, 2);
             $table->boolean('is_read')->default(false);
             $table->timestamps();
+
+            $table->index(['user_id', 'is_read']);
         });
     }
 

@@ -12,15 +12,22 @@ class ProductService
     /**
      * Get all products with optional search filter and pagination.
      */
-    public function getAll(?string $search = null, int $perPage = 15): LengthAwarePaginator
-    {
-        $query = Product::with('listings');
-
-        if (! empty($search)) {
-            $query->whereLike('name', '%'.addcslashes($search, '%_').'%');
-        }
-
-        return $query->paginate($perPage);
+    public function getAll(
+        ?string $search,
+        int $perPage,
+        ?string $scope,
+        User $user,
+    ): LengthAwarePaginator {
+        return Product::with('listings')
+            ->when($scope === 'tracked', fn ($query) => $query->withWhereHas(
+                'monitors',
+                fn ($monitorQuery) => $monitorQuery->where('user_id', $user->id)
+            ))
+            ->when($search, fn ($query) => $query->whereLike(
+                'name',
+                '%'.addcslashes($search, '%_').'%'
+            ))
+            ->paginate($perPage);
     }
 
     /**

@@ -22,7 +22,7 @@ class ListingResource extends JsonResource
             'currency' => $this->currency,
             'status' => $this->status,
             'last_error_reason' => $this->last_error_reason,
-            'last_scrape_at' => $this->last_scrape_at,
+            'last_scraped_at' => $this->last_scraped_at,
             'history' => PriceHistoryResource::collection($this->whenLoaded('priceHistories')),
             'min_price' => round($this->priceHistories?->min('price'), 2),
             'avg_price' => round($this->priceHistories?->avg('price'), 2),

@@ -24,8 +24,13 @@ class ProductController extends Controller
      */
     public function index(ProductIndexRequest $request): AnonymousResourceCollection
     {
-        $perPage = $request->query('per_page', 15);
-        $products = $this->productService->getAll($request->query('q'), $perPage);
+        $validated = $request->validated();
+        $products = $this->productService->getAll(
+            $validated['q'] ?? null,
+            $validated['per_page'] ?? 15,
+            $validated['scope'] ?? null,
+            $request->user(),
+        );
 
         return ProductResource::collection($products);
     }
