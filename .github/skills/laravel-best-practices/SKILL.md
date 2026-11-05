@@ -22,7 +22,7 @@ Check sibling files and related controllers, models, or tests for established pa
 2. Map every affected concern to the rule index below. Read each mapped rule file before editing. Skip unrelated rule files.
 3. Make the smallest coherent change. Keep the application's architecture and naming instead of introducing a second pattern for the same job.
 4. Verify version-sensitive Laravel APIs for the installed version with `search-docs`, or inspect the installed framework when `search-docs` is unavailable.
-5. Run the narrowest relevant tests first, then the project's formatting and static-analysis checks when the change warrants them.
+5. Run the narrowest relevant tests when a code change materially affects behavior and tests can verify it. Do not run or recommend tests for advice-only requests, and do not mention tests as a routine follow-up.
 6. Re-read the diff against every mapped rule before finishing.
 
 ## Rule index

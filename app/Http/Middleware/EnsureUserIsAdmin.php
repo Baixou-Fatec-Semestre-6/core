@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserIsAdmin
@@ -15,10 +16,7 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Verifica se o usuário está autenticado e é um administrador
-        if (! $request->user() || ! $request->user()->isAdmin()) {
-            abort(403, 'Acesso não autorizado.');
-        }
+        Gate::authorize('access-admin');
 
         return $next($request);
     }

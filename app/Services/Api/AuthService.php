@@ -2,28 +2,23 @@
 
 namespace App\Services\Api;
 
+use App\Actions\SendUserActivation;
+use App\Enums\UserStatus;
+use App\Enums\VerificationType;
+use App\Mail\ResetPasswordMail;
 use App\Models\User;
 use App\Models\VerificationCode;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
-use App\Enums\VerificationType;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
-use App\Enums\UserStatus;
-use App\Mail\ActivationMail;
-use App\Mail\ResetPasswordMail;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
-    /**
-     * Create a new class instance.
-     */
-    public function __construct()
+    public function __construct(private SendUserActivation $sendUserActivation)
     {
-        //
     }
 
 
@@ -46,18 +41,10 @@ class AuthService
                 $user->name = Str::before($data['email'], '@');
             }
 
+            $user->status = UserStatus::PENDING;
             $user->saveOrFail();
 
-            // Criar código de verificação
-            $verification = new VerificationCode();
-            $verification->user_id = $user->id;
-            $verification->code_hash = fake()->numerify('####');
-            $verification->type = VerificationType::ACTIVATION;
-            $verification->expires_at = Carbon::parse('+10 minutes');
-            $verification->saveOrFail();
-
-            // Enviar email de verificação
-            Mail::to($user->email)->queue(new ActivationMail($verification->code_hash));
+            $this->sendUserActivation->handle($user);
 
             return $user;
         });
@@ -97,10 +84,9 @@ class AuthService
         ];
     }
 
-
     /**
      * Logout the authenticated user.
-     * 
+     *
      * @return void
      */
     public function logout(): void
@@ -110,7 +96,7 @@ class AuthService
 
     /**
      * Activate the user's account.
-     * 
+     *
      * @param array $data The activation data.
      * @param string $data['email'] The user's email.
      * @param string $data['code'] The activation code.

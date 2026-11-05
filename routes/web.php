@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AuthController;
+use App\Livewire\Admin\Users;
 
 Route::name('admin.')->group(function () {
 
@@ -46,6 +47,7 @@ Route::name('admin.')->group(function () {
         //     ->name('monitoring.dispatch-batch');
 
         // // Users Management
+        Route::get('users', Users\Index::class)->name('users.index');
         // Route::get('users', [UserController::class, 'index'])->name('users.index');
         // Route::patch('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])
         //     ->name('users.toggle-status');
