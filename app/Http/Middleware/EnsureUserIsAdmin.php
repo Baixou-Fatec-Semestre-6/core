@@ -16,6 +16,10 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if (! $request->user()) {
+            return redirect()->guest(route('admin.login'));
+        }
+
         Gate::authorize('access-admin');
 
         return $next($request);

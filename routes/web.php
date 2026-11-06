@@ -1,8 +1,9 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AuthController;
+use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\Users;
+use Illuminate\Support\Facades\Route;
 
 Route::name('admin.')->group(function () {
 
@@ -27,12 +28,10 @@ Route::name('admin.')->group(function () {
     // 2. Protected Administrative Routes
     Route::middleware(['admin'])->group(function () {
 
+        Route::get('/', Dashboard\Index::class)->name('dashboard');
+
         // Logout
         Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
-
-        // // Dashboard
-        // Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-        // Route::get('dashboard', [DashboardController::class, 'index']);
 
         // // Products Management (CRUD + Toggle Monitoring)
         // Route::resource('products', ProductController::class);
