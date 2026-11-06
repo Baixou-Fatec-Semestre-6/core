@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Components\Admin;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Closure;
 use Illuminate\Contracts\View\View;
@@ -65,7 +66,10 @@ final class Sidebar extends Component
                 'route' => 'admin.users.index',
                 'active' => 'admin.users.*',
                 'icon' => 'users',
-                'badge' => fn () => $this->cached('users', fn () => User::query()->count()),
+                'badge' => fn () => $this->cached(
+                    'users:regular',
+                    fn () => User::query()->where('role', UserRole::USER->value)->count(),
+                ),
             ],
             [
                 'label' => 'Inscrições (Alertas)',
