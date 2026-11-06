@@ -3,19 +3,24 @@
 
 <div class="space-y-4">
     {{-- Toolbar --}}
-    <x-admin.card padded class="flex items-center justify-between">
+    <x-admin.card padded class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <x-admin.input
             type="text"
             wire:model.live.debounce.300ms="search"
             placeholder="Buscar usuário por nome ou e-mail..."
             aria-label="Buscar usuário por nome ou e-mail"
             autocomplete="off"
-            class="w-72"
+            class="w-full sm:w-72"
         />
 
-        <span class="text-xs text-neutral-400 font-mono">
-            Total: {{ number_format($users->total(), 0, ',', '.') }} {{ $this->search === '' ? 'contas cadastradas' : 'contas encontradas' }}
-        </span>
+        <div class="flex items-center justify-between gap-3">
+            <span wire:loading.delay wire:target="search" class="text-xs font-mono text-neutral-400">
+                Buscando…
+            </span>
+            <span class="text-xs font-mono text-neutral-400">
+                Total: {{ number_format($users->total(), 0, ',', '.') }} {{ $this->search === '' ? 'contas cadastradas' : 'contas encontradas' }}
+            </span>
+        </div>
     </x-admin.card>
 
     @if (session()->has('status'))
@@ -27,7 +32,7 @@
     @enderror
 
     {{-- Users table --}}
-    <x-admin.table wire:loading.class="opacity-60" wire:target="search">
+    <x-admin.table wire:loading.delay.class="opacity-60" wire:target="search">
         <x-slot:head>
             <x-admin.th>ID</x-admin.th>
             <x-admin.th>Usuário</x-admin.th>
@@ -81,7 +86,10 @@
                     <x-admin.button
                         :variant="$toggleLabel === 'Desativar' ? 'link-danger' : 'link-success'"
                         wire:click="toggleStatus({{ $user->id }})"
+                        wire:target="toggleStatus({{ $user->id }})"
+                        wire:loading.attr="disabled"
                         wire:confirm="{{ $toggleLabel }} a conta de {{ $user->name }}?"
+                        class="disabled:cursor-wait disabled:opacity-50"
                     >{{ $toggleLabel }}</x-admin.button>
                 </x-admin.td>
             </tr>

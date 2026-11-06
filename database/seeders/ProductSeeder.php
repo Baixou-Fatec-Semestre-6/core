@@ -2,11 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\PriceHistory;
 use App\Models\Product;
 use App\Models\ProductListing;
-use App\Models\PriceHistory;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Store;
 use Illuminate\Database\Seeder;
+use InvalidArgumentException;
 
 class ProductSeeder extends Seeder
 {
@@ -49,17 +50,22 @@ class ProductSeeder extends Seeder
             $product = Product::create($productData);
 
             foreach ($listings as $listingData) {
+                $store = Store::query()->firstOrCreate(
+                    ['name' => $listingData['store']],
+                    ['base_url' => $this->baseUrl($listingData['url'])],
+                );
+
                 $listing = ProductListing::create([
                     'product_id' => $product->id,
+                    'store_id' => $store->id,
                     ...$listingData,
                 ]);
 
-                // Create 3 price history entries for each listing
                 $basePrice = $listingData['current_price'];
                 $priceVariations = [
-                    $basePrice * 1.10, // 10% higher
-                    $basePrice * 1.05, // 5% higher
-                    $basePrice,        // current price
+                    $basePrice * 1.10,
+                    $basePrice * 1.05,
+                    $basePrice,
                 ];
 
                 foreach ($priceVariations as $index => $price) {
@@ -72,5 +78,17 @@ class ProductSeeder extends Seeder
                 }
             }
         }
+    }
+
+    private function baseUrl(string $url): string
+    {
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (! in_array(strtolower((string) $scheme), ['http', 'https'], true) || ! is_string($host)) {
+            throw new InvalidArgumentException('Product listing URL must have an HTTP or HTTPS host.');
+        }
+
+        return strtolower($scheme).'://'.$host;
     }
 }

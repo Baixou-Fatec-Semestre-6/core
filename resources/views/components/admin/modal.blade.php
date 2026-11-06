@@ -18,8 +18,8 @@
     x-data="{ open: false }"
     x-cloak
     x-show="open"
-    x-on:open-modal.window="if ($event.detail === @js($name)) open = true"
-    x-on:close-modal.window="if ($event.detail === @js($name)) open = false"
+    x-on:open-modal.window="if (($event.detail?.name ?? $event.detail) === @js($name)) open = true"
+    x-on:close-modal.window="if (($event.detail?.name ?? $event.detail) === @js($name)) open = false"
     x-on:keydown.escape.window="open = false"
     x-on:click.self="open = false"
     role="dialog"

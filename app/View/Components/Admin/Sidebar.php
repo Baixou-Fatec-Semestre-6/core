@@ -6,6 +6,7 @@ namespace App\View\Components\Admin;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Models\Product;
 use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Cache;
@@ -50,7 +51,7 @@ final class Sidebar extends Component
                 'route' => 'admin.products.index',
                 'active' => 'admin.products.*',
                 'icon' => 'cube',
-                // 'badge' => fn () => $this->cached('products', fn () => Product::count()),
+                'badge' => fn () => $this->cached('products', fn () => Product::count()),
             ],
             [
                 'label' => 'Monitoramento & Scraping',

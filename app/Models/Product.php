@@ -14,7 +14,15 @@ class Product extends Model
     protected $fillable = [
         'name',
         'image_url',
+        'track_price',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'track_price' => 'boolean',
+        ];
+    }
 
     public function listings(): HasMany
     {

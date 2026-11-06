@@ -62,9 +62,10 @@ class ProductService
 
         $product->monitors()->firstOrCreate(['user_id' => $user->id]);
 
-        // Request a scrape for each listing of the product
-        foreach ($product->listings as $listing) {
-            $this->scrapeDispatcher->requestIfDue($listing);
+        if ($product->track_price) {
+            foreach ($product->listings as $listing) {
+                $this->scrapeDispatcher->requestIfDue($listing);
+            }
         }
 
         return $product->load([

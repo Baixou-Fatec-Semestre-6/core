@@ -13,9 +13,7 @@ class ScrapeDispatcher
      *
      * @param  RabbitMqPublisher  $publisher  Publisher used to send scrape events.
      */
-    public function __construct(private RabbitMqPublisher $publisher)
-    {
-    }
+    public function __construct(private RabbitMqPublisher $publisher) {}
 
     /**
      * Publish a request for every monitored listing that is due for scraping.
@@ -28,6 +26,7 @@ class ScrapeDispatcher
 
         ProductListing::query()
             ->whereHas('product.monitors')
+            ->whereHas('product', fn ($query) => $query->where('track_price', true))
             ->where(fn ($q) => $q->whereNull('last_scraped_at')
                 ->orWhere('last_scraped_at', '<', now()->subHour()))
             ->chunkById(200, function ($listings) use (&$count): void {

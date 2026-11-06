@@ -14,13 +14,20 @@ use App\Models\ProductMonitor;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Layout('components.layouts.admin')]
 #[Title('Dashboard Operacional')]
+#[Lazy]
 final class Index extends Component
 {
+    public function placeholder(): View
+    {
+        return view('livewire.admin.dashboard.placeholder');
+    }
+
     public function render(): View
     {
         $last24Hours = now()->subDay();

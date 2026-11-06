@@ -18,6 +18,7 @@ class ProductListing extends Model
 
     protected $fillable = [
         'product_id',
+        'store_id',
         'store',
         'url',
         'current_price',
@@ -40,6 +41,11 @@ class ProductListing extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function storeRecord(): BelongsTo
+    {
+        return $this->belongsTo(Store::class, 'store_id');
     }
 
     public function priceHistories(): HasMany

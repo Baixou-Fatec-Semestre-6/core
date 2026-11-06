@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Livewire\Admin\Dashboard;
+use App\Livewire\Admin\Products;
 use App\Livewire\Admin\Users;
 use Illuminate\Support\Facades\Route;
 
@@ -34,7 +35,7 @@ Route::name('admin.')->group(function () {
         Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
         // // Products Management (CRUD + Toggle Monitoring)
-        // Route::resource('products', ProductController::class);
+        Route::get('products', Products\Index::class)->name('products.index');
         // Route::patch('products/{product}/toggle-monitoring', [ProductController::class, 'toggleMonitoring'])
         //     ->name('products.toggle-monitoring');
 

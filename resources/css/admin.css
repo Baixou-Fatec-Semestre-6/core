@@ -7,6 +7,14 @@
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+#nprogress .bar {
+    background: #facc15 !important;
+}
+
+#nprogress .peg {
+    box-shadow: 0 0 10px #facc15, 0 0 5px #facc15 !important;
+}
+
 @layer base {
     :root {
         color-scheme: dark;
