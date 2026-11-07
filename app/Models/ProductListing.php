@@ -14,6 +14,7 @@ class ProductListing extends Model
 
     protected $attributes = [
         'status' => ProductListingStatus::PENDING->value,
+        'scrape_attempts' => 0,
     ];
 
     protected $fillable = [
@@ -23,6 +24,7 @@ class ProductListing extends Model
         'url',
         'current_price',
         'currency',
+        'scrape_attempts',
         'last_scraped_at',
         'status',
         'last_error_reason',
@@ -34,6 +36,7 @@ class ProductListing extends Model
             'current_price' => 'decimal:2',
             'last_scraped_at' => 'datetime',
             'scrape_requested_at' => 'datetime',
+            'scrape_attempts' => 'integer',
             'status' => ProductListingStatus::class,
         ];
     }

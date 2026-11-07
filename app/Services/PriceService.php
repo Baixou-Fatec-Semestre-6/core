@@ -7,8 +7,8 @@ use App\Jobs\SendPriceAlert;
 use App\Models\Alert;
 use App\Models\PriceNotification;
 use App\Models\ProductListing;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Records listing prices and evaluates product price alerts.
@@ -50,6 +50,7 @@ class PriceService
                 'status' => ProductListingStatus::SCRAPED,
                 'last_error_reason' => null,
                 'last_scraped_at' => $scrapedAt,
+                'scrape_attempts' => 0,
             ]);
 
             $listing->priceHistories()->create([
@@ -67,9 +68,9 @@ class PriceService
     /**
      * Mark a listing as failed after an unsuccessful scrape.
      *
-     * @param ProductListing $listing Listing that failed to scrape.
-     * @param string $reason Why the scrape failed.
-     * @param Carbon $scrapedAt When the attempt happened.
+     * @param  ProductListing  $listing  Listing that failed to scrape.
+     * @param  string  $reason  Why the scrape failed.
+     * @param  Carbon  $scrapedAt  When the attempt happened.
      */
     public function recordFailure(ProductListing $listing, string $reason, Carbon $scrapedAt): void
     {

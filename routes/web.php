@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Livewire\Admin\Dashboard;
+use App\Livewire\Admin\Monitoring;
 use App\Livewire\Admin\Products;
 use App\Livewire\Admin\Users;
 use Illuminate\Support\Facades\Route;
@@ -39,12 +40,7 @@ Route::name('admin.')->group(function () {
         // Route::patch('products/{product}/toggle-monitoring', [ProductController::class, 'toggleMonitoring'])
         //     ->name('products.toggle-monitoring');
 
-        // // Monitoring & Scraping (RabbitMQ ↔ Spring)
-        // Route::get('monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
-        // Route::post('monitoring/retry/{job}', [MonitoringController::class, 'retryScrapeJob'])
-        //     ->name('monitoring.retry');
-        // Route::post('monitoring/dispatch-batch', [MonitoringController::class, 'dispatchBatchScrape'])
-        //     ->name('monitoring.dispatch-batch');
+        Route::get('monitoring', Monitoring\Index::class)->name('monitoring.index');
 
         // // Users Management
         Route::get('users', Users\Index::class)->name('users.index');
