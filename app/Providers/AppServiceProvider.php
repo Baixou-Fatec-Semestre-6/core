@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use App\Services\RabbitMqPublisher;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -25,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('access-admin', fn (?User $user): bool => $user?->isAdmin() ?? false);
+        Gate::define('manage-admins', fn (?User $user): bool => $user?->role === UserRole::SUPER_ADMIN);
 
         ResetPassword::createUrlUsing(function (User $user, string $token) {
             return route('admin.password.reset', [

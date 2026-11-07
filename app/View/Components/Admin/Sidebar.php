@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\View\Components\Admin;
 
 use App\Enums\UserRole;
-use App\Models\User;
 use App\Models\Product;
+use App\Models\User;
 use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\View\Component;
 
@@ -39,7 +40,7 @@ final class Sidebar extends Component
      */
     private function definition(): array
     {
-        return [
+        $items = [
             [
                 'label' => 'Dashboard',
                 'route' => 'admin.dashboard',
@@ -87,16 +88,25 @@ final class Sidebar extends Component
                 'icon' => 'document',
                 'iconClass' => 'text-neutral-400',
             ],
-            [
+
+        ];
+
+        if (Gate::allows('manage-admins')) {
+            $items[] = [
                 'label' => 'Administradores',
                 'route' => 'admin.admins.index',
                 'active' => 'admin.admins.*',
                 'icon' => 'shield',
                 'iconClass' => 'text-purple-400',
                 'badgeVariant' => 'count-purple',
-                // 'badge' => fn () => $this->cached('admins', fn () => Admin::query()->count()),
-            ],
-        ];
+                'badge' => fn () => $this->cached('admins', fn () => User::whereIn('role', [
+                    UserRole::ADMIN->value,
+                    UserRole::SUPER_ADMIN->value,
+                ])->count()),
+            ];
+        }
+
+        return $items;
     }
 
     /**
