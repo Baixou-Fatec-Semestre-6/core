@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\Monitoring;
 use App\Livewire\Admin\Products;
+use App\Livewire\Admin\Subscriptions;
 use App\Livewire\Admin\Users;
 use Illuminate\Support\Facades\Route;
 
@@ -49,9 +50,7 @@ Route::name('admin.')->group(function () {
         //     ->name('users.toggle-status');
 
         // // Subscriptions
-        // Route::get('subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
-        // Route::patch('subscriptions/{subscription}/toggle', [SubscriptionController::class, 'toggleActive'])
-        //     ->name('subscriptions.toggle');
+        Route::get('subscriptions', Subscriptions\Index::class)->name('subscriptions.index');
 
         // // Audit Log
         // Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
