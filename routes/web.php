@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Livewire\Admin\Admins;
+use App\Livewire\Admin\Audit;
 use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\Monitoring;
 use App\Livewire\Admin\Products;
@@ -53,8 +54,8 @@ Route::name('admin.')->group(function () {
         // // Subscriptions
         Route::get('subscriptions', Subscriptions\Index::class)->name('subscriptions.index');
 
-        // // Audit Log
-        // Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
+        // Audit Log
+        Route::get('audit', Audit\Index::class)->name('audit.index');
 
         // // Admin Management (RBAC, CRUD, Password Reset Trigger)
         Route::get('admins', Admins\Index::class)->name('admins.index')->middleware('can:manage-admins');

@@ -7,6 +7,7 @@ namespace App\Livewire\Admin\Products;
 use App\Models\Product;
 use App\Models\ProductListing;
 use App\Models\Store;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -91,13 +92,21 @@ final class Index extends Component
         ]);
     }
 
-    public function toggleTracking(int $productId): void
+    public function toggleTracking(int $productId, AuditLogger $auditLogger): void
     {
         Gate::authorize('access-admin');
 
         $product = Product::query()->findOrFail($productId);
         $product->track_price = ! $product->track_price;
         $product->save();
+
+        $auditLogger->log(
+            $product->track_price ? 'product.monitoring_enabled' : 'product.monitoring_disabled',
+            $product->track_price
+                ? "Monitoramento ativado para o produto #{$product->id}."
+                : "Monitoramento desativado para o produto #{$product->id}.",
+            $product,
+        );
     }
 
     public function showProductDetails(int $listingId): void
@@ -112,7 +121,7 @@ final class Index extends Component
         $this->dispatch('open-modal', name: 'product-details');
     }
 
-    public function createProduct(): void
+    public function createProduct(AuditLogger $auditLogger): void
     {
         Gate::authorize('access-admin');
 
@@ -172,7 +181,7 @@ final class Index extends Component
             $validated['listingRows'],
         ));
 
-        DB::transaction(function () use ($validated, $storeIds): void {
+        $product = DB::transaction(function () use ($validated, $storeIds): Product {
             $stores = Store::query()
                 ->whereKey($storeIds)
                 ->lockForUpdate()
@@ -209,7 +218,15 @@ final class Index extends Component
                     'currency' => $validated['currency'],
                 ]);
             }
+
+            return $product;
         });
+
+        $auditLogger->log(
+            'product.created',
+            "Produto #{$product->id} cadastrado.",
+            $product,
+        );
 
         $this->reset(['productName', 'imageUrl']);
         $this->listingRows = $stores

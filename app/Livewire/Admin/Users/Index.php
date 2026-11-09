@@ -9,6 +9,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Events\Admin\UserStatusChanged;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -36,7 +37,7 @@ class Index extends Component
         $this->resetPage();
     }
 
-    public function toggleStatus(int $userId): void
+    public function toggleStatus(int $userId, AuditLogger $auditLogger): void
     {
         $actor = Auth::user();
         // Livewire actions are public endpoints: authorize again, don't rely on the route alone.
@@ -54,16 +55,37 @@ class Index extends Component
         };
         $user->save();
 
+        $statusLabel = match ($user->status) {
+            UserStatus::DISABLED => 'desativado',
+            UserStatus::PENDING => 'pendente de confirmação',
+            UserStatus::ACTIVE => 'ativo',
+        };
+
+        $auditLogger->log(
+            'user.status_changed',
+            "Status do usuário #{$user->id} alterado para {$statusLabel}.",
+            $user,
+        );
+
         UserStatusChanged::dispatch($user, $actor, $oldStatus, $user->status);
     }
 
-    public function resendActivation(int $userId, SendUserActivation $sendUserActivation): void
-    {
+    public function resendActivation(
+        int $userId,
+        SendUserActivation $sendUserActivation,
+        AuditLogger $auditLogger,
+    ): void {
         $actor = Auth::user();
         Gate::forUser($actor)->authorize('access-admin');
 
         $user = User::query()->findOrFail($userId);
         $sendUserActivation->handle($user);
+
+        $auditLogger->log(
+            'user.activation_resent',
+            "E-mail de ativação reenviado ao usuário #{$user->id}.",
+            $user,
+        );
 
         $this->resetValidation('activation');
         session()->flash('status', "E-mail de ativação reenviado para {$user->email}.");

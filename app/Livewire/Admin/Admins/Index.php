@@ -9,6 +9,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Events\Admin\UserStatusChanged;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -100,7 +101,7 @@ final class Index extends Component
         $this->dispatch('open-modal', name: 'admin-form');
     }
 
-    public function saveAdmin(SendUserActivation $sendUserActivation): void
+    public function saveAdmin(SendUserActivation $sendUserActivation, AuditLogger $auditLogger): void
     {
         Gate::authorize('manage-admins');
 
@@ -117,6 +118,14 @@ final class Index extends Component
 
         $this->fillAdmin($admin, $data, $isNew, $emailChanged);
         $admin->save();
+
+        $auditLogger->log(
+            $isNew ? 'admin.created' : 'admin.updated',
+            $isNew
+                ? "Administrador #{$admin->id} criado."
+                : "Administrador #{$admin->id} atualizado.",
+            $admin,
+        );
 
         // Notifications / side effects
         if ($oldStatus !== null && $oldStatus !== $admin->status) {
@@ -148,7 +157,7 @@ final class Index extends Component
     // Row actions
     // ---------------------------------------------------------------------
 
-    public function toggleStatus(int $userId): void
+    public function toggleStatus(int $userId, AuditLogger $auditLogger): void
     {
         Gate::authorize('manage-admins');
 
@@ -165,22 +174,40 @@ final class Index extends Component
         $user->status = $this->statusAfterToggle($user);
         $user->save();
 
+        $statusLabel = match ($user->status) {
+            UserStatus::DISABLED => 'desativado',
+            UserStatus::PENDING => 'pendente de confirmação',
+            UserStatus::ACTIVE => 'ativo',
+        };
+
+        $auditLogger->log(
+            'admin.status_changed',
+            "Status do administrador #{$user->id} alterado para {$statusLabel}.",
+            $user,
+        );
+
         UserStatusChanged::dispatch($user, $actor, $oldStatus, $user->status);
 
         $this->flash("Conta #{$user->id} marcada como {$user->status->value}.");
     }
 
-    public function sendResetLink(int $userId): void
+    public function sendResetLink(int $userId, AuditLogger $auditLogger): void
     {
         Gate::authorize('manage-admins');
 
         $user = User::query()->findOrFail($userId);
         Password::sendResetLink(['email' => $user->email]);
 
+        $auditLogger->log(
+            'admin.password_reset_requested',
+            "Link de redefinição de senha solicitado para o administrador #{$user->id}.",
+            $user,
+        );
+
         $this->flash("E-mail de redefinição enviado para {$user->email}.");
     }
 
-    public function deleteAdmin(int $userId): void
+    public function deleteAdmin(int $userId, AuditLogger $auditLogger): void
     {
         Gate::authorize('manage-admins');
 
@@ -199,6 +226,12 @@ final class Index extends Component
         }
 
         $admin->delete();
+
+        $auditLogger->log(
+            'admin.deleted',
+            "Administrador #{$admin->id} excluído.",
+            $admin,
+        );
 
         $this->flash("Administrador #{$admin->id} excluído com sucesso.");
     }

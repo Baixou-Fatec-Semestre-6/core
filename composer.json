@@ -12,6 +12,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^4.4",
+        "mongodb/laravel-mongodb": "^5.12",
         "php-amqplib/php-amqplib": "^3.7"
     },
     "require-dev": {

@@ -10,6 +10,8 @@ x-shared-app: &shared-app
     - DB_DATABASE=${DB_DATABASE:-baixou}
     - DB_USERNAME=${DB_USERNAME:-dev}
     - DB_PASSWORD=${DB_PASSWORD:-123}
+    - MONGO_DB_DATABASE=${MONGO_DB_DATABASE:-baixou}
+    - MONGO_DB_URI=mongodb://${MONGO_DB_USERNAME:-dev}:${MONGO_DB_PASSWORD:-123}@mongodb:27017/${MONGO_DB_DATABASE:-baixou}?authSource=admin
     - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
     - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
     - RABBITMQ_USER=${RABBITMQ_USER:-baixou_app}
@@ -36,6 +38,8 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
+        condition: service_started
+      mongodb:
         condition: service_started
       rabbitmq-definitions:
         condition: service_completed_successfully
@@ -92,6 +96,21 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-123}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - core
+
+  mongodb:
+    image: mongo:9.0.4
+    container_name: core_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DB_DATABASE:-baixou}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USERNAME:-dev}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD:-123}
+    volumes:
+      - mongodb_data:/data/db
     networks:
       - core
 
@@ -159,3 +178,4 @@ networks:
 volumes:
   postgres_data:
   rabbitmq_data:
+  mongodb_data:

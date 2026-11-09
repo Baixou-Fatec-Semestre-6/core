@@ -18,6 +18,10 @@ RUN apt-get update && apt-get install -y \
 RUN pecl install xdebug-3.3.2 && \
     docker-php-ext-enable xdebug
 
+# Instalar o mongodb
+RUN pecl install mongodb-2.5.7 && \
+    docker-php-ext-enable mongodb
+
 # Configurar e instalar extensões do PHP
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg
 RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd

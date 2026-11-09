@@ -7,17 +7,17 @@ namespace App\Livewire\Admin\Monitoring;
 use App\Enums\ProductListingStatus;
 use App\Models\PriceHistory;
 use App\Models\ProductListing;
+use App\Services\AuditLogger;
 use App\Services\ScrapeDispatcher;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
-
 
 #[Layout('components.layouts.admin')]
 #[Title('Monitoramento & Scraping')]
@@ -27,8 +27,11 @@ final class Index extends Component
 
     private const PER_PAGE = 15;
 
-    public function retryFailedScrape(int $listingId, ScrapeDispatcher $scrapeDispatcher): void
-    {
+    public function retryFailedScrape(
+        int $listingId,
+        ScrapeDispatcher $scrapeDispatcher,
+        AuditLogger $auditLogger,
+    ): void {
         Gate::authorize('access-admin');
 
         $listing = ProductListing::query()
@@ -38,6 +41,12 @@ final class Index extends Component
             ->findOrFail($listingId);
 
         $scrapeDispatcher->retry($listing);
+
+        $auditLogger->log(
+            'scrape.retry_requested',
+            "Nova tentativa de coleta solicitada para o anúncio #{$listing->id}.",
+            $listing,
+        );
 
         session()->flash('status', "Anúncio #{$listing->id} reenviado ao RabbitMQ.");
     }

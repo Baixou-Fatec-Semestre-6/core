@@ -6,6 +6,7 @@ namespace App\Livewire\Admin\Subscriptions;
 
 use App\Models\ProductMonitor;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -26,7 +27,7 @@ final class Index extends Component
     #[Url(as: 'user')]
     public ?int $user = null;
 
-    public function toggleStatus(int $monitorId): void
+    public function toggleStatus(int $monitorId, AuditLogger $auditLogger): void
     {
         Gate::forUser(Auth::user())->authorize('access-admin');
 
@@ -41,6 +42,14 @@ final class Index extends Component
 
         $alert->triggered_at = $alert->triggered_at === null ? now() : null;
         $alert->save();
+
+        $auditLogger->log(
+            $alert->triggered_at === null ? 'subscription.enabled' : 'subscription.disabled',
+            $alert->triggered_at === null
+                ? "Inscrição #SUB-{$monitor->id} do produto #{$monitor->product_id} ativada."
+                : "Inscrição #SUB-{$monitor->id} do produto #{$monitor->product_id} desativada.",
+            $monitor,
+        );
 
         session()->flash(
             'status',

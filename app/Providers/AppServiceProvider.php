@@ -27,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::define('access-admin', fn (?User $user): bool => $user?->isAdmin() ?? false);
         Gate::define('manage-admins', fn (?User $user): bool => $user?->role === UserRole::SUPER_ADMIN);
+        Gate::define('manage-audit-logs', fn (?User $user): bool => $user?->role === UserRole::SUPER_ADMIN);
 
         ResetPassword::createUrlUsing(function (User $user, string $token) {
             return route('admin.password.reset', [

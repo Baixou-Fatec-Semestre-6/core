@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\View\Components\Admin;
 
+use App\Enums\ProductListingStatus;
 use App\Enums\UserRole;
+use App\Models\ProductListing;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\Alert;
 use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Cache;
@@ -61,7 +64,7 @@ final class Sidebar extends Component
                 'icon' => 'bolt',
                 'iconClass' => 'text-emerald-400',
                 'badgeVariant' => 'count-danger',
-                // 'badge' => fn () => ($n = ScrapeJob::failed()->count()) > 0 ? "{$n} falhas" : null,
+                'badge' => fn () => ($n = ProductListing::where('status', ProductListingStatus::FAILED)->count()) > 0 ? "{$n} falhas" : null,
             ],
             [
                 'label' => 'Usuários',
@@ -79,17 +82,19 @@ final class Sidebar extends Component
                 'active' => 'admin.subscriptions.*',
                 'icon' => 'bell',
                 'iconClass' => 'text-orange-400',
-                // 'badge' => fn () => $this->cached('subscriptions', fn () => Subscription::query()->where('is_active', true)->count()),
+                'badge' => fn () => $this->cached('subscriptions', fn () => Alert::whereHas('productMonitor')->count()),
             ],
-            [
+        ];
+
+        if (Gate::allows('manage-audit-logs')) {
+            $items[] = [
                 'label' => 'Log de Auditoria',
                 'route' => 'admin.audit.index',
                 'active' => 'admin.audit.*',
                 'icon' => 'document',
                 'iconClass' => 'text-neutral-400',
-            ],
-
-        ];
+            ];
+        }
 
         if (Gate::allows('manage-admins')) {
             $items[] = [
