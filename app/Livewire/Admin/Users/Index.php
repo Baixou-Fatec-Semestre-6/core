@@ -97,7 +97,9 @@ class Index extends Component
 
         $users = User::query()
             ->where('role', UserRole::USER)
-            ->withCount('productMonitors')
+            ->withCount([
+                'productMonitors' => fn (Builder $query) => $query->whereHas('alerts'),
+            ])
             ->when($term !== '', function (Builder $query) use ($term): void {
                 $like = '%'.addcslashes($term, '%_\\').'%';
 

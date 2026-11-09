@@ -72,6 +72,7 @@ final class Index extends Component
                 ]),
                 'alerts' => fn ($query) => $query->latest('created_at')->limit(1),
             ])
+            ->whereHas('alerts')
             ->when($this->user !== null, fn ($query) => $query->where('user_id', $this->user))
             ->latest()
             ->paginate(self::PER_PAGE);

@@ -53,7 +53,7 @@
                         <th class="py-2 pr-4">Job ID</th>
                         <th class="py-2 pr-4">Produto &amp; Loja</th>
                         <th class="py-2 pr-4">URL alvo</th>
-                        <th class="py-2 pr-4">Erro básico detectado</th>
+                        <th class="py-2 pr-4">Erro detectado</th>
                         <th class="py-2 pr-4">Tentativas</th>
                         <th class="py-2 text-right">Ação do admin</th>
                     </tr>
