@@ -27,6 +27,12 @@ final class Index extends Component
     #[Url(as: 'user')]
     public ?int $user = null;
 
+    public function clearUserFilter(): void
+    {
+        $this->user = null;
+        $this->resetPage();
+    }
+
     public function toggleStatus(int $monitorId, AuditLogger $auditLogger): void
     {
         Gate::forUser(Auth::user())->authorize('access-admin');

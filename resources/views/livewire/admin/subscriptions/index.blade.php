@@ -16,16 +16,28 @@
         </div>
 
         <div class="text-right text-xs text-neutral-400">
-            @if ($selectedUser)
-                <span class="block font-mono text-[10px] text-yellow-400">Filtrando por {{ $selectedUser->name }}</span>
-            @else
+            @unless ($selectedUser)
                 <span class="block font-mono text-[10px]">Total: {{ number_format($subscriptions->total(), 0, ',', '.') }} inscrições</span>
-            @endif
+            @endunless
             <span class="mt-1 block font-mono text-[10px] text-emerald-300">
                 {{ number_format($totalActive, 0, ',', '.') }} ativas
             </span>
         </div>
     </x-admin.card>
+
+    @if ($selectedUser)
+        <div class="flex justify-start">
+            <button
+                type="button"
+                wire:click="clearUserFilter"
+                aria-label="Limpar filtro por usuário {{ $selectedUser->name }}"
+                class="inline-flex items-center gap-2 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 font-mono text-[11px] text-yellow-300 transition hover:border-yellow-400/50 hover:bg-yellow-400/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+            >
+                <span>Filtro por usuário: {{ $selectedUser->name }}</span>
+                <span aria-hidden="true" class="text-sm leading-none">×</span>
+            </button>
+        </div>
+    @endif
 
     <x-admin.table>
         <x-slot:head>
