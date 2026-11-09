@@ -15,7 +15,49 @@
         </div>
     </x-admin.card>
 
-    <x-admin.table wire:loading.delay.class="opacity-60">
+    <x-admin.card padded class="flex flex-col gap-3">
+        <label class="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Buscar
+            <x-admin.input
+                type="search"
+                wire:model.live.debounce.300ms="search"
+                placeholder="Administrador, ação, mensagem ou IP..."
+                aria-label="Buscar registros de auditoria"
+                autocomplete="off"
+                class="w-full"
+            />
+        </label>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label class="flex flex-1 flex-col gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                Data inicial
+                <x-admin.input type="date" wire:model.live="fromDate" aria-label="Filtrar desde esta data" />
+                @error('fromDate')
+                    <span role="alert" class="normal-case tracking-normal text-red-400">{{ $message }}</span>
+                @enderror
+            </label>
+
+            <label class="flex flex-1 flex-col gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                Data final
+                <x-admin.input type="date" wire:model.live="toDate" aria-label="Filtrar até esta data" />
+                @error('toDate')
+                    <span role="alert" class="normal-case tracking-normal text-red-400">{{ $message }}</span>
+                @enderror
+            </label>
+
+            <x-admin.button
+                variant="secondary"
+                wire:click="clearFilters"
+                wire:loading.attr="disabled"
+                wire:target="clearFilters"
+                class="shrink-0"
+            >
+                Limpar filtros
+            </x-admin.button>
+        </div>
+    </x-admin.card>
+
+    <x-admin.table wire:loading.delay.class="opacity-60" wire:target="search,fromDate,toDate">
         <x-slot:head>
             <x-admin.th>Data / Hora</x-admin.th>
             <x-admin.th>Administrador</x-admin.th>
