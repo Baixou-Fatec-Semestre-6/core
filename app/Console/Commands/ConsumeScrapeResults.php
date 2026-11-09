@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\ProductListingStatus;
 use App\Models\ProductListing;
 use App\Services\PriceService;
 use Carbon\Carbon;
@@ -74,7 +73,6 @@ class ConsumeScrapeResults extends Command
         return self::SUCCESS;
     }
 
-
     /**
      * Process a single scrape result message.
      */
@@ -84,7 +82,7 @@ class ConsumeScrapeResults extends Command
         $routingKey = $message->delivery_info['routing_key'];
 
         $context = [
-            'event_id' => $data['event_id'] ?? null,
+            'request_id' => $data['request_id'] ?? null,
             'listing_id' => $data['listing_id'] ?? null,
             'routing_key' => $routingKey,
         ];
@@ -93,6 +91,7 @@ class ConsumeScrapeResults extends Command
 
         if ($listing === null) {
             Log::warning('Scrape result ignored: listing not found', $context);
+
             return;
         }
 
@@ -103,16 +102,16 @@ class ConsumeScrapeResults extends Command
                 'scraped_at' => $scrapedAt->toIso8601String(),
                 'last_scraped_at' => $listing->last_scraped_at->toIso8601String(),
             ]);
+
             return;
         }
 
         match ($routingKey) {
-            'scrape.completed' => $pricesService->recordPrice($listing, (float) $data['price'], $scrapedAt),
-            'scrape.failed' => $pricesService->recordFailure($listing, $data['reason'] ?? 'Unknown error', $scrapedAt),
+            'price.scraped' => $pricesService->recordPrice($listing, (float) $data['price'], $scrapedAt),
+            'price.failed' => $pricesService->recordFailure($listing, $data['reason'] ?? 'Unknown error', $scrapedAt),
             default => throw new \UnexpectedValueException("Unknown routing key: {$routingKey}"),
         };
 
         Log::info('Scrape result processed', $context);
     }
-
 }

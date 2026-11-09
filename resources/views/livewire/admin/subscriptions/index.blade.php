@@ -5,27 +5,25 @@
         </p>
     @endif
 
-    <x-admin.card class="p-4">
-        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-                <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
-                    Fluxo de alertas
-                </span>
-                <p class="mt-1 text-xs text-neutral-300">
-                    Usuário → Inscrição (Preço-Alvo) → Produto → Queda de preço → Notificação.
-                </p>
-            </div>
+    <x-admin.card padded class="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+        <div>
+            <h2 class="text-xs font-bold uppercase text-neutral-100">
+                Inscrições de Monitoramento
+            </h2>
+            <p class="text-[11px] text-neutral-400">
+                Gerencie os alertas de preço e acompanhe os produtos monitorados pelos usuários
+            </p>
+        </div>
 
-            <div class="text-right text-xs text-neutral-400">
-                @if ($selectedUser)
-                    <span class="block font-mono text-[10px] text-yellow-400">Filtrando por {{ $selectedUser->name }}</span>
-                @else
-                    <span class="block font-mono text-[10px]">Total: {{ number_format($subscriptions->total(), 0, ',', '.') }} inscrições</span>
-                @endif
-                <span class="mt-1 block font-mono text-[10px] text-emerald-300">
-                    {{ number_format($totalActive, 0, ',', '.') }} ativas
-                </span>
-            </div>
+        <div class="text-right text-xs text-neutral-400">
+            @if ($selectedUser)
+                <span class="block font-mono text-[10px] text-yellow-400">Filtrando por {{ $selectedUser->name }}</span>
+            @else
+                <span class="block font-mono text-[10px]">Total: {{ number_format($subscriptions->total(), 0, ',', '.') }} inscrições</span>
+            @endif
+            <span class="mt-1 block font-mono text-[10px] text-emerald-300">
+                {{ number_format($totalActive, 0, ',', '.') }} ativas
+            </span>
         </div>
     </x-admin.card>
 

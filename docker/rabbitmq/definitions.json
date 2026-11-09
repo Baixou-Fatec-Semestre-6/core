@@ -6,7 +6,34 @@
   ],
   "exchanges": [
     {
-      "name": "baixou",
+      "name": "scrape_commands",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "price_events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "scrape_commands.retry",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "scrape_commands.dlx",
       "vhost": "/",
       "type": "topic",
       "durable": true,
@@ -17,7 +44,28 @@
   ],
   "queues": [
     {
-      "name": "scraper.requests",
+      "name": "scrape_requests",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "scrape_commands.dlx",
+        "x-dead-letter-routing-key": "scrape.dead"
+      }
+    },
+    {
+      "name": "scrape_requests.retry",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "scrape_commands",
+        "x-dead-letter-routing-key": "scrape.requested",
+        "x-message-ttl": 30000
+      }
+    },
+    {
+      "name": "scrape_requests.dlq",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
@@ -33,27 +81,43 @@
   ],
   "bindings": [
     {
-      "source": "baixou",
+      "source": "scrape_commands",
       "vhost": "/",
-      "destination": "scraper.requests",
+      "destination": "scrape_requests",
       "destination_type": "queue",
       "routing_key": "scrape.requested",
       "arguments": {}
     },
     {
-      "source": "baixou",
+      "source": "scrape_commands.retry",
       "vhost": "/",
-      "destination": "core.scrape.results",
+      "destination": "scrape_requests.retry",
       "destination_type": "queue",
-      "routing_key": "scrape.completed",
+      "routing_key": "scrape.requested",
       "arguments": {}
     },
     {
-      "source": "baixou",
+      "source": "scrape_commands.dlx",
+      "vhost": "/",
+      "destination": "scrape_requests.dlq",
+      "destination_type": "queue",
+      "routing_key": "scrape.dead",
+      "arguments": {}
+    },
+    {
+      "source": "price_events",
       "vhost": "/",
       "destination": "core.scrape.results",
       "destination_type": "queue",
-      "routing_key": "scrape.failed",
+      "routing_key": "price.scraped",
+      "arguments": {}
+    },
+    {
+      "source": "price_events",
+      "vhost": "/",
+      "destination": "core.scrape.results",
+      "destination_type": "queue",
+      "routing_key": "price.failed",
       "arguments": {}
     }
   ]

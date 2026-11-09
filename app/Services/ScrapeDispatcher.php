@@ -86,7 +86,7 @@ class ScrapeDispatcher
     private function publishRequest(ProductListing $listing, bool $resetAttempts = false): void
     {
         $this->publisher->publish('scrape.requested', [
-            'event_id' => (string) Str::uuid(),
+            'request_id' => (string) Str::uuid(),
             'listing_id' => $listing->id,
             'url' => $listing->url,
             'store' => $listing->store,

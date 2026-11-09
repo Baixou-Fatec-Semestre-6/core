@@ -1,4 +1,5 @@
 <?php
+
 // config/rabbitmq.php
 
 return [
@@ -6,6 +7,6 @@ return [
     'port' => env('RABBITMQ_PORT', 5672),
     'user' => env('RABBITMQ_USER', 'guest'),
     'password' => env('RABBITMQ_PASSWORD', 'guest'),
-    'exchange' => 'baixou',
+    'exchange' => env('RABBITMQ_EXCHANGE_COMMANDS', 'scrape_commands'),
     'results_queue' => 'core.scrape.results',
 ];

@@ -48,11 +48,13 @@
             <x-admin.th compact>Monitoramento</x-admin.th>
             <x-admin.th compact>Último Scrape</x-admin.th>
             <x-admin.th compact>Próximo Scrape</x-admin.th>
+            <x-admin.th compact>Ação</x-admin.th>
         </x-slot:head>
 
         @forelse ($listings as $listing)
             @php
     $isTracking = $listing->product->track_price;
+    $listingNeedsRetry = $listing->status === \App\Enums\ProductListingStatus::FAILED;
     $nextScrapeAt = $listing->last_scraped_at?->copy()->addHour();
     $scrapeWasRecentlyRequested = $listing->scrape_requested_at?->isAfter(now()->subMinutes(10)) ?? false;
     $scrapeIsDue = $nextScrapeAt === null || $nextScrapeAt->isPast();
@@ -105,10 +107,28 @@
                         {{ $nextScrapeAt->format('d/m/Y H:i') }}
                     @endif
                 </x-admin.td>
+                <x-admin.td compact>
+                    <x-admin.button
+                        variant="secondary"
+                        wire:click="requestScrape({{ $listing->id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="requestScrape({{ $listing->id }})"
+                        :disabled="$scrapeWasRecentlyRequested && ! $listingNeedsRetry"
+                        class="whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        @if ($listingNeedsRetry)
+                            Tentar novamente
+                        @elseif ($scrapeWasRecentlyRequested)
+                            Na fila
+                        @else
+                            Solicitar scrape
+                        @endif
+                    </x-admin.button>
+                </x-admin.td>
             </tr>
         @empty
             <tr>
-                <td colspan="7" class="px-4 py-10 text-center text-neutral-400">
+                <td colspan="8" class="px-4 py-10 text-center text-neutral-400">
                     Nenhum produto encontrado.
                 </td>
             </tr>

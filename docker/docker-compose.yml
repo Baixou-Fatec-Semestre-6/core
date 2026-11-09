@@ -160,6 +160,19 @@ services:
         --data-binary @/definitions.json
         http://rabbitmq:15672/api/definitions
 
+  # Python scrapper
+  scrapper:
+    build: https://github.com/Baixou-Fatec-Semestre-6/scrapping.git#feat/scrapping-rabbitmq-validacoes
+    container_name: scrapper
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: amqp://baixou_app:local_dev_password@rabbitmq:5672/%2F
+    networks:
+      - core
+    depends_on:
+      rabbitmq-definitions:
+        condition: service_completed_successfully
+
   # Mailpit service for capturing emails sent by the application during development
   mailpit:
     image: axllent/mailpit:latest

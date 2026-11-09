@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin\Products;
 
+use App\Enums\ProductListingStatus;
 use App\Models\Product;
 use App\Models\ProductListing;
 use App\Models\Store;
 use App\Services\AuditLogger;
+use App\Services\ScrapeDispatcher;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -119,6 +121,34 @@ final class Index extends Component
 
         $this->selectedListingId = $listingId;
         $this->dispatch('open-modal', name: 'product-details');
+    }
+
+    public function requestScrape(
+        int $listingId,
+        ScrapeDispatcher $scrapeDispatcher,
+        AuditLogger $auditLogger,
+    ): void {
+        Gate::authorize('access-admin');
+
+        $listing = ProductListing::query()
+            ->whereHas('product')
+            ->findOrFail($listingId);
+
+        if ($listing->status === ProductListingStatus::FAILED) {
+            $scrapeDispatcher->retry($listing);
+            $auditAction = 'scrape.retry_requested';
+            $message = "Nova tentativa de scraping solicitada para o anúncio #{$listing->id}.";
+        } elseif (! $scrapeDispatcher->requestIfDue($listing)) {
+            session()->flash('status', "Anúncio #{$listing->id} já tem uma solicitação de scraping recente.");
+
+            return;
+        } else {
+            $auditAction = 'scrape.manual_requested';
+            $message = "Solicitação de scraping enviada para o anúncio #{$listing->id}.";
+        }
+
+        $auditLogger->log($auditAction, $message, $listing);
+        session()->flash('status', $message);
     }
 
     public function createProduct(AuditLogger $auditLogger): void

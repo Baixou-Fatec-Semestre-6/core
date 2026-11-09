@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\AuditLog;
 use Illuminate\Database\Eloquent\Model;
 
-final class AuditLogger
+class AuditLogger
 {
     /**
      * @param  array<string, mixed>  $metadata
