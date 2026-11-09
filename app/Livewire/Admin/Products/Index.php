@@ -12,6 +12,8 @@ use App\Services\AuditLogger;
 use App\Services\ScrapeDispatcher;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -447,6 +449,10 @@ final class Index extends Component
     public function render(): View
     {
         $searchTerm = trim($this->search);
+        $nextScrapeTimestamp = Cache::get('scrape-dispatch:next-run');
+        $nextScrapeAt = $nextScrapeTimestamp === null
+            ? null
+            : Carbon::createFromTimestamp($nextScrapeTimestamp, config('app.timezone'));
 
         $listings = ProductListing::query()
             ->with(['product', 'storeRecord'])
@@ -482,6 +488,7 @@ final class Index extends Component
 
         return view('livewire.admin.products.index', [
             'listings' => $listings,
+            'nextScrapeAt' => $nextScrapeAt,
             'selectedListing' => $this->selectedListingId === null
                 ? null
                 : ProductListing::query()

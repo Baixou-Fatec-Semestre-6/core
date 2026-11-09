@@ -87,7 +87,7 @@ final class Index extends Component
                     ->whereHas('product')
                     ->count(),
                 'nextScrapeAt' => when(Cache::get('scrape-dispatch:next-run'),
-                    fn ($timestamp) => Carbon::createFromTimestamp($timestamp)),
+                    fn ($timestamp) => Carbon::createFromTimestamp($timestamp, config('app.timezone'))),
                 'maxAttempts' => ScrapeDispatcher::MAX_ATTEMPTS,
             ],
             'rabbitMqExchange' => config('rabbitmq.exchange'),
