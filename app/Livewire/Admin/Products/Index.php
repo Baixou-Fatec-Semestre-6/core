@@ -58,6 +58,22 @@ final class Index extends Component
 
     public string $pendingDeleteProductName = '';
 
+    /**
+     * @return array<string, string>
+     */
+    protected function validationAttributes(): array
+    {
+        return [
+            'productName' => 'nome do produto',
+            'imageUrl' => 'URL da imagem',
+            'currency' => 'moeda dos anúncios',
+            'listingRows' => 'lojas e anúncios',
+            'listingRows.*.store_id' => 'loja',
+            'listingRows.*.path' => 'URL do anúncio',
+            'listingRows.*.current_price' => 'preço do anúncio',
+        ];
+    }
+
     public function mount(): void
     {
         $this->listingRows = Store::query()
