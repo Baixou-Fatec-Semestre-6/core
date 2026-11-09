@@ -66,14 +66,79 @@
     </section>
 
     <x-admin.card class="space-y-3 p-5">
+        @php
+            $hasFilters = $this->search !== '' || $this->status !== '' || $this->fromDate !== '' || $this->toDate !== '';
+            $resultCount = $scrapeRequests->total();
+        @endphp
         <div class="flex flex-col justify-between gap-2 border-b border-neutral-800 pb-2 sm:flex-row sm:items-center">
             <h2 class="text-xs font-bold uppercase text-neutral-100">
                 Status das coletas
             </h2>
+            <span class="font-mono text-xs text-neutral-400">
+                {{ number_format($resultCount, 0, ',', '.') }}
+                @if ($hasFilters)
+                    {{ $resultCount === 1 ? 'resultado' : 'resultados' }}
+                @else
+                    {{ $resultCount === 1 ? 'solicitação' : 'solicitações' }}
+                    <span class="text-neutral-500">de {{ number_format($totalScrapeRequests, 0, ',', '.') }}</span>
+                @endif
+            </span>
+        </div>
+
+        <div class="flex flex-col gap-3 border-b border-neutral-800 pb-4">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <x-admin.input
+                    type="search"
+                    wire:model.live.debounce.300ms="search"
+                    placeholder="Produto, loja, URL, erro ou ID..."
+                    aria-label="Buscar solicitações de scraping"
+                    autocomplete="off"
+                    class="w-full lg:flex-1"
+                />
+
+                <x-admin.select wire:model.live="status" aria-label="Filtrar por status" class="w-full lg:w-52">
+                    <option value="">Todos os status</option>
+                    <option value="queued">Aguardando resultado</option>
+                    <option value="succeeded">Concluído</option>
+                    <option value="failed">Falhou</option>
+                    <option value="ignored">Ignorado</option>
+                </x-admin.select>
+            </div>
+            @error('status')
+                <span role="alert" class="text-xs text-red-400">{{ $message }}</span>
+            @enderror
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <label class="flex flex-1 flex-col gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                    Solicitado desde
+                    <x-admin.input type="date" wire:model.live="fromDate" aria-label="Filtrar solicitações desde esta data" />
+                    @error('fromDate')
+                        <span role="alert" class="normal-case tracking-normal text-red-400">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <label class="flex flex-1 flex-col gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                    Solicitado até
+                    <x-admin.input type="date" wire:model.live="toDate" aria-label="Filtrar solicitações até esta data" />
+                    @error('toDate')
+                        <span role="alert" class="normal-case tracking-normal text-red-400">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <x-admin.button
+                    variant="secondary"
+                    wire:click="clearFilters"
+                    wire:loading.attr="disabled"
+                    wire:target="clearFilters"
+                    class="shrink-0"
+                >
+                    Limpar filtros
+                </x-admin.button>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[900px] text-left text-xs">
+            <table wire:loading.delay.class="opacity-60" wire:target="search,status,fromDate,toDate" class="w-full min-w-[900px] text-left text-xs">
                 <thead>
                     <tr class="border-b border-neutral-800 text-[10px] uppercase text-neutral-400">
                         <th class="py-2 pr-4">Job ID</th>
