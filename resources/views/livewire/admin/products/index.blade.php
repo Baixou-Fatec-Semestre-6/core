@@ -31,7 +31,9 @@
         </div>
 
         <x-admin.button
-            x-on:click="$dispatch('open-modal', 'create-product')"
+            wire:click="prepareCreateProduct"
+            wire:loading.attr="disabled"
+            wire:target="prepareCreateProduct"
             icon="plus"
             class="shrink-0"
         >
@@ -108,22 +110,52 @@
                     @endif
                 </x-admin.td>
                 <x-admin.td compact>
-                    <x-admin.button
-                        variant="secondary"
-                        wire:click="requestScrape({{ $listing->id }})"
-                        wire:loading.attr="disabled"
-                        wire:target="requestScrape({{ $listing->id }})"
-                        :disabled="$scrapeWasRecentlyRequested && ! $listingNeedsRetry"
-                        class="whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        @if ($listingNeedsRetry)
-                            Tentar novamente
-                        @elseif ($scrapeWasRecentlyRequested)
-                            Na fila
-                        @else
-                            Solicitar scrape
-                        @endif
-                    </x-admin.button>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="showProductDetails({{ $listing->id }})"
+                            aria-label="Ver {{ $listing->product->name }}"
+                            class="font-semibold text-yellow-400 hover:text-yellow-300"
+                        >
+                            Ver
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="editProduct({{ $listing->product_id }})"
+                            wire:loading.attr="disabled"
+                            wire:target="editProduct({{ $listing->product_id }})"
+                            aria-label="Editar {{ $listing->product->name }}"
+                            class="font-semibold text-neutral-300 hover:text-neutral-100 disabled:opacity-50"
+                        >
+                            Editar
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="confirmDeleteProduct({{ $listing->product_id }})"
+                            wire:loading.attr="disabled"
+                            wire:target="confirmDeleteProduct({{ $listing->product_id }})"
+                            aria-label="Excluir {{ $listing->product->name }}"
+                            class="font-semibold text-red-400 hover:text-red-300 disabled:opacity-50"
+                        >
+                            Excluir
+                        </button>
+                        <x-admin.button
+                            variant="secondary"
+                            wire:click="requestScrape({{ $listing->id }})"
+                            wire:loading.attr="disabled"
+                            wire:target="requestScrape({{ $listing->id }})"
+                            :disabled="$scrapeWasRecentlyRequested && ! $listingNeedsRetry"
+                            class="whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            @if ($listingNeedsRetry)
+                                Tentar novamente
+                            @elseif ($scrapeWasRecentlyRequested)
+                                Na fila
+                            @else
+                                Solicitar scrape
+                            @endif
+                        </x-admin.button>
+                    </div>
                 </x-admin.td>
             </tr>
         @empty
@@ -308,12 +340,12 @@
 
     <x-admin.modal
         name="create-product"
-        title="Cadastrar Produto"
-        icon="plus"
+        :title="$editingProductId === null ? 'Cadastrar Produto' : 'Editar Produto'"
+        :icon="$editingProductId === null ? 'plus' : null"
         max-width="max-w-2xl"
         class="max-h-[90vh] flex flex-col"
     >
-        <form wire:submit="createProduct" class="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+        <form wire:submit="saveProduct" class="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div class="md:col-span-2">
                     <x-admin.label for="product-name">Nome do produto</x-admin.label>
@@ -349,7 +381,11 @@
                         <div>
                             <h4 class="text-xs font-bold text-neutral-200">Lojas e anúncios</h4>
                             <p class="mt-1 text-[11px] text-neutral-400">
-                                Preencha a URL e o preço das lojas desejadas. As lojas sem URL serão ignoradas.
+                                @if ($editingProductId === null)
+                                    Preencha a URL e o preço das lojas desejadas. As lojas sem URL serão ignoradas.
+                                @else
+                                    Edite os anúncios existentes. Limpar a URL remove aquele anúncio e preserva seu histórico.
+                                @endif
                             </p>
                         </div>
                     </div>
@@ -370,7 +406,7 @@
                             $row = $listingRows[$availableStore->id] ?? ['path' => '', 'current_price' => ''];
                                                     @endphp
                                                     <div
-                                                        wire:key="new-listing-row-{{ $availableStore->id }}"
+                                                        wire:key="product-listing-row-{{ $editingProductId ?? 'new' }}-{{ $availableStore->id }}"
                                                         class="grid grid-cols-1 items-start gap-3 rounded-lg border border-neutral-800 bg-neutral-800/40 p-3 lg:grid-cols-[minmax(8rem,0.6fr)_minmax(12rem,1.4fr)_8rem]"
                                                     >
                                                         <div>
@@ -446,18 +482,51 @@
                 <x-admin.button
                     variant="secondary"
                     x-on:click="$dispatch('close-modal', 'create-product')"
+                    wire:click="$set('editingProductId', null)"
                 >
                     Cancelar
                 </x-admin.button>
                 <x-admin.button
                     type="submit"
                     wire:loading.attr="disabled"
-                    wire:target="createProduct"
+                    wire:target="saveProduct"
                 >
-                    <span wire:loading.remove wire:target="createProduct">Salvar Produto</span>
-                    <span wire:loading wire:target="createProduct">Salvando...</span>
+                    <span wire:loading.remove wire:target="saveProduct">
+                        {{ $editingProductId === null ? 'Salvar Produto' : 'Salvar Alterações' }}
+                    </span>
+                    <span wire:loading wire:target="saveProduct">Salvando...</span>
                 </x-admin.button>
             </div>
         </form>
+    </x-admin.modal>
+
+    <x-admin.modal name="delete-product" title="Excluir Produto" max-width="max-w-md">
+        <div class="space-y-4 p-5 text-sm">
+            <p class="text-neutral-300">
+                Tem certeza que deseja excluir
+                <strong class="text-neutral-100">{{ $pendingDeleteProductName }}</strong>
+                e todos os seus anúncios? O histórico de preços será preservado.
+            </p>
+
+            <div class="flex justify-end gap-2">
+                <x-admin.button
+                    variant="secondary"
+                    x-on:click="$dispatch('close-modal', 'delete-product')"
+                    wire:click="$set('pendingDeleteProductId', null)"
+                >
+                    Cancelar
+                </x-admin.button>
+                <x-admin.button
+                    variant="secondary"
+                    wire:click="deleteProduct"
+                    wire:loading.attr="disabled"
+                    wire:target="deleteProduct"
+                    class="border-red-500/40 text-red-300 hover:bg-red-500/10"
+                >
+                    <span wire:loading.remove wire:target="deleteProduct">Excluir Produto</span>
+                    <span wire:loading wire:target="deleteProduct">Excluindo...</span>
+                </x-admin.button>
+            </div>
+        </div>
     </x-admin.modal>
 </div>

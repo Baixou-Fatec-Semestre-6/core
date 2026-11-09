@@ -49,6 +49,12 @@ final class Index extends Component
 
     public ?int $selectedListingId = null;
 
+    public ?int $editingProductId = null;
+
+    public ?int $pendingDeleteProductId = null;
+
+    public string $pendingDeleteProductName = '';
+
     public function mount(): void
     {
         $this->listingRows = Store::query()
@@ -123,6 +129,117 @@ final class Index extends Component
         $this->dispatch('open-modal', name: 'product-details');
     }
 
+    public function prepareCreateProduct(): void
+    {
+        Gate::authorize('access-admin');
+
+        $this->editingProductId = null;
+        $this->resetProductForm();
+        $this->resetValidation();
+        $this->dispatch('open-modal', name: 'create-product');
+    }
+
+    public function editProduct(int $productId): void
+    {
+        Gate::authorize('access-admin');
+
+        $product = Product::query()
+            ->with('listings')
+            ->findOrFail($productId);
+        $stores = Store::query()->orderBy('name')->get();
+
+        $this->editingProductId = $product->id;
+        $this->productName = $product->name;
+        $this->imageUrl = $product->image_url ?? '';
+        $this->currency = $product->listings->first()?->currency ?? 'BRL';
+        $this->listingRows = $stores
+            ->mapWithKeys(function (Store $store) use ($product): array {
+                $listing = $product->listings->firstWhere('store_id', $store->id);
+                $path = '';
+
+                if ($listing !== null) {
+                    $baseUrl = rtrim($store->base_url, '/').'/';
+                    $path = str_starts_with($listing->url, $baseUrl)
+                        ? substr($listing->url, strlen($baseUrl))
+                        : ltrim((string) parse_url($listing->url, PHP_URL_PATH), '/');
+                    $query = parse_url($listing->url, PHP_URL_QUERY);
+
+                    if ($query !== null && ! str_contains($path, '?')) {
+                        $path .= '?'.$query;
+                    }
+                }
+
+                return [
+                    $store->id => [
+                        'store_id' => $store->id,
+                        'path' => $path,
+                        'current_price' => $listing?->current_price ?? '',
+                    ],
+                ];
+            })
+            ->all();
+
+        $this->resetValidation();
+        $this->dispatch('open-modal', name: 'create-product');
+    }
+
+    public function confirmDeleteProduct(int $productId): void
+    {
+        Gate::authorize('access-admin');
+
+        $product = Product::query()->findOrFail($productId);
+        $this->pendingDeleteProductId = $product->id;
+        $this->pendingDeleteProductName = $product->name;
+        $this->dispatch('open-modal', name: 'delete-product');
+    }
+
+    public function deleteProduct(AuditLogger $auditLogger): void
+    {
+        Gate::authorize('access-admin');
+
+        abort_if($this->pendingDeleteProductId === null, 404);
+
+        $productId = $this->pendingDeleteProductId;
+        $product = Product::query()->findOrFail($productId);
+        $selectedListingBelongsToProduct = $this->selectedListingId !== null
+            && $product->listings()->whereKey($this->selectedListingId)->exists();
+
+        $product = DB::transaction(function () use ($productId): Product {
+            $product = Product::query()
+                ->lockForUpdate()
+                ->findOrFail($productId);
+
+            $product->listings()
+                ->lockForUpdate()
+                ->get()
+                ->each(fn (ProductListing $listing) => $listing->delete());
+            $product->delete();
+
+            return $product;
+        });
+
+        $auditLogger->log(
+            'product.deleted',
+            "Produto #{$product->id} e seus anúncios foram excluídos.",
+            $product,
+        );
+
+        if ($selectedListingBelongsToProduct) {
+            $this->selectedListingId = null;
+            $this->dispatch('close-modal', name: 'product-details');
+        }
+
+        if ($this->editingProductId === $product->id) {
+            $this->editingProductId = null;
+            $this->dispatch('close-modal', name: 'create-product');
+        }
+
+        $this->pendingDeleteProductId = null;
+        $this->pendingDeleteProductName = '';
+        $this->dispatch('close-modal', name: 'delete-product');
+        session()->flash('status', 'Produto e anúncios excluídos com sucesso.');
+    }
+
     public function requestScrape(
         int $listingId,
         ScrapeDispatcher $scrapeDispatcher,
@@ -151,7 +268,7 @@ final class Index extends Component
         session()->flash('status', $message);
     }
 
-    public function createProduct(AuditLogger $auditLogger): void
+    public function saveProduct(AuditLogger $auditLogger): void
     {
         Gate::authorize('access-admin');
 
@@ -195,12 +312,12 @@ final class Index extends Component
             ...$listingRowRules,
         ]);
 
-        $validated['listingRows'] = array_filter(
+        $listingRowsWithPath = array_filter(
             $validated['listingRows'],
             static fn (array $row): bool => filled($row['path']),
         );
 
-        if ($validated['listingRows'] === []) {
+        if ($listingRowsWithPath === []) {
             throw ValidationException::withMessages([
                 'listingRows' => 'Informe a URL de pelo menos uma loja.',
             ]);
@@ -210,8 +327,9 @@ final class Index extends Component
             static fn (array $row): int => (int) $row['store_id'],
             $validated['listingRows'],
         ));
+        $isEditing = $this->editingProductId !== null;
 
-        $product = DB::transaction(function () use ($validated, $storeIds): Product {
+        $product = DB::transaction(function () use ($validated, $storeIds, $isEditing): Product {
             $stores = Store::query()
                 ->whereKey($storeIds)
                 ->lockForUpdate()
@@ -224,13 +342,36 @@ final class Index extends Component
                 ]);
             }
 
-            $product = Product::query()->create([
-                'name' => $validated['productName'],
-                'image_url' => $validated['imageUrl'] ?: null,
-            ]);
+            if ($isEditing) {
+                $product = Product::query()
+                    ->lockForUpdate()
+                    ->findOrFail($this->editingProductId);
+                $product->update([
+                    'name' => $validated['productName'],
+                    'image_url' => $validated['imageUrl'] ?: null,
+                ]);
+                $existingListings = $product->listings()
+                    ->whereIn('store_id', $storeIds)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('store_id');
+            } else {
+                $product = Product::query()->create([
+                    'name' => $validated['productName'],
+                    'image_url' => $validated['imageUrl'] ?: null,
+                ]);
+                $existingListings = collect();
+            }
 
             foreach ($validated['listingRows'] as $storeId => $row) {
                 $store = $stores->get((int) $row['store_id']);
+
+                if (! filled($row['path'])) {
+                    $existingListings->get((int) $storeId)?->delete();
+
+                    continue;
+                }
+
                 $path = ltrim(trim($row['path']), '/');
                 $url = rtrim($store->base_url, '/').($path === '' ? '' : '/'.$path);
 
@@ -240,25 +381,35 @@ final class Index extends Component
                     ]);
                 }
 
-                $product->listings()->create([
+                $listingAttributes = [
                     'store_id' => $store->id,
                     'store' => $store->name,
                     'url' => $url,
                     'current_price' => $row['current_price'],
                     'currency' => $validated['currency'],
-                ]);
+                ];
+                $existingListing = $existingListings->get((int) $storeId);
+
+                if ($existingListing === null) {
+                    $product->listings()->create($listingAttributes);
+                } else {
+                    $existingListing->update($listingAttributes);
+                }
             }
 
             return $product;
         });
 
         $auditLogger->log(
-            'product.created',
-            "Produto #{$product->id} cadastrado.",
+            $isEditing ? 'product.updated' : 'product.created',
+            $isEditing
+                ? "Produto #{$product->id} atualizado."
+                : "Produto #{$product->id} cadastrado.",
             $product,
         );
 
-        $this->reset(['productName', 'imageUrl']);
+        $this->editingProductId = null;
+        $this->resetProductForm();
         $this->listingRows = $stores
             ->mapWithKeys(static fn (Store $store): array => [
                 $store->id => [
@@ -270,7 +421,27 @@ final class Index extends Component
             ->all();
         $this->currency = 'BRL';
         $this->dispatch('close-modal', name: 'create-product');
-        session()->flash('status', 'Produto cadastrado com sucesso.');
+        session()->flash(
+            'status',
+            $isEditing ? 'Produto atualizado com sucesso.' : 'Produto cadastrado com sucesso.',
+        );
+    }
+
+    private function resetProductForm(): void
+    {
+        $this->reset(['productName', 'imageUrl']);
+        $this->currency = 'BRL';
+        $this->listingRows = Store::query()
+            ->orderBy('name')
+            ->get()
+            ->mapWithKeys(static fn (Store $store): array => [
+                $store->id => [
+                    'store_id' => $store->id,
+                    'path' => '',
+                    'current_price' => '',
+                ],
+            ])
+            ->all();
     }
 
     public function render(): View
