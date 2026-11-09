@@ -19,7 +19,7 @@ class ProductSeeder extends Seeder
         $products = [
             [
                 'name' => 'Logitech MX Master 3 Sem Fio',
-                'image_url' => 'https://m.media-amazon.com/images/I/61ni3t1ryQL._AC_SL1500_.jpg',
+                'image_source_url' => 'https://m.media-amazon.com/images/I/61ni3t1ryQL._AC_SL1500_.jpg',
                 'listings' => [
                     [
                         'store' => 'Amazon',
@@ -31,7 +31,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Monitor Gamer LG UltraGear 27" Full HD 144Hz',
-                'image_url' => 'https://m.media-amazon.com/images/W/BW_MEDIAX_AVIF_MEASUREMENT_1306696-T2/images/I/51TxRQnL7AL._AC_SX450_.jpg',
+                'image_source_url' => 'https://m.media-amazon.com/images/W/BW_MEDIAX_AVIF_MEASUREMENT_1306696-T2/images/I/51TxRQnL7AL._AC_SX450_.jpg',
                 'listings' => [
                     [
                         'store' => 'Amazon',

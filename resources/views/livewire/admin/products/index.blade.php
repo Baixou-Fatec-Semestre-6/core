@@ -178,16 +178,38 @@
                         Informações do Produto
                     </h4>
 
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                            <span class="block text-neutral-400">Nome</span>
-                            <strong class="text-sm text-neutral-100">{{ $selectedListing->product->name }}</strong>
+                    <div class="grid grid-cols-1 items-center gap-4 sm:grid-cols-[8rem_minmax(0,1fr)]">
+                        <div class="flex h-32 w-32 items-center justify-center overflow-hidden rounded-lg border border-neutral-800 bg-neutral-800/50">
+                            @if (filled($selectedListing->product->image_url))
+                                <img
+                                    src="{{ $selectedListing->product->image_url }}"
+                                    alt="{{ $selectedListing->product->name }}"
+                                    loading="lazy"
+                                    class="h-full w-full object-contain"
+                                >
+                            @else
+                                <div
+                                    role="img"
+                                    aria-label="Imagem do produto não disponível"
+                                    class="flex flex-col items-center gap-2 text-neutral-500"
+                                >
+                                    <x-admin.icon name="cube" size="h-8 w-8" />
+                                    <span class="text-[10px]">Sem imagem</span>
+                                </div>
+                            @endif
                         </div>
-                        <div>
-                            <span class="block text-neutral-400">Loja</span>
-                            <strong class="text-neutral-100">
-                                {{ $selectedListing->storeRecord?->name ?? $selectedListing->store }}
-                            </strong>
+
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <span class="block text-neutral-400">Nome</span>
+                                <strong class="text-sm text-neutral-100">{{ $selectedListing->product->name }}</strong>
+                            </div>
+                            <div>
+                                <span class="block text-neutral-400">Loja</span>
+                                <strong class="text-neutral-100">
+                                    {{ $selectedListing->storeRecord?->name ?? $selectedListing->store }}
+                                </strong>
+                            </div>
                         </div>
                     </div>
 

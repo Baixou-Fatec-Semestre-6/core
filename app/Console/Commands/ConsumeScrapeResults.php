@@ -8,14 +8,24 @@ use App\Models\ScrapeRequest;
 use App\Services\PriceService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use League\Flysystem\UnableToDeleteFile;
+use League\Flysystem\UnableToWriteFile;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
+use RuntimeException;
 use Throwable;
 
 class ConsumeScrapeResults extends Command
 {
+    private const MAX_IMAGE_BYTES = 5_242_880;
+
     /**
      * The name and signature of the console command.
      *
@@ -136,17 +146,240 @@ class ConsumeScrapeResults extends Command
             ? (string) ($data['reason'] ?? 'Unknown error')
             : null;
 
-        DB::transaction(function () use ($data, $errorReason, $listing, $pricesService, $resultStatus, $scrapeRequest, $scrapedAt): void {
-            if ($resultStatus === ScrapeRequestStatus::SUCCEEDED) {
-                $pricesService->recordPrice($listing, (float) $data['price'], $scrapedAt);
+        $product = $listing->product;
+        $existingImageSourceUrl = $product?->image_source_url;
+        $existingImagePath = $product?->image_path;
+        $existingImageIsScraped = filled($existingImagePath)
+            || (filled($existingImageSourceUrl)
+                && $this->validatedImageUrl($existingImageSourceUrl) !== null);
+        $storedImagePath = null;
+        $imageSourceUrl = null;
+
+        if (
+            $resultStatus === ScrapeRequestStatus::SUCCEEDED
+            && filled($data['image_url'] ?? null)
+            && (! filled($existingImageSourceUrl) || $existingImageIsScraped)
+        ) {
+            $imageSourceUrl = $this->validatedImageUrl($data['image_url']);
+
+            if ($imageSourceUrl === null) {
+                Log::warning('Scraped product image URL ignored because it is invalid', $context);
             } else {
-                $pricesService->recordFailure($listing, $errorReason ?? 'Unknown error', $scrapedAt);
+                $storedImagePath = $this->downloadImage($imageSourceUrl, $context);
+            }
+        }
+
+        $imageWasSaved = false;
+
+        try {
+            DB::transaction(function () use ($data, $errorReason, $existingImagePath, $existingImageSourceUrl, $imageSourceUrl, $listing, $pricesService, $resultStatus, $scrapeRequest, $scrapedAt, $storedImagePath, &$imageWasSaved): void {
+                if ($resultStatus === ScrapeRequestStatus::SUCCEEDED) {
+                    $pricesService->recordPrice($listing, (float) $data['price'], $scrapedAt);
+
+                    if ($storedImagePath !== null) {
+                        $productQuery = $listing->product();
+
+                        if (filled($existingImageSourceUrl)) {
+                            $productQuery->where('image_source_url', $existingImageSourceUrl);
+                        } else {
+                            $productQuery->where(function ($query): void {
+                                $query->whereNull('image_source_url')
+                                    ->orWhere('image_source_url', '');
+                            });
+                        }
+
+                        if (filled($existingImagePath)) {
+                            $productQuery->where('image_path', $existingImagePath);
+                        } else {
+                            $productQuery->whereNull('image_path');
+                        }
+
+                        $imageWasSaved = $productQuery->update([
+                            'image_source_url' => $imageSourceUrl,
+                            'image_path' => $storedImagePath,
+                        ]) > 0;
+                    }
+                } else {
+                    $pricesService->recordFailure($listing, $errorReason ?? 'Unknown error', $scrapedAt);
+                }
+
+                $this->finishRequest($scrapeRequest, $resultStatus, $errorReason);
+            });
+        } catch (Throwable $exception) {
+            if ($storedImagePath !== null) {
+                $this->deleteStoredImage($storedImagePath, $context);
             }
 
-            $this->finishRequest($scrapeRequest, $resultStatus, $errorReason);
-        });
+            throw $exception;
+        }
+
+        if ($storedImagePath !== null && ! $imageWasSaved) {
+            $this->deleteStoredImage($storedImagePath, $context);
+        }
 
         Log::info('Scrape result processed', $context);
+    }
+
+    private function validatedImageUrl(mixed $imageUrl): ?string
+    {
+        if (! is_string($imageUrl)) {
+            return null;
+        }
+
+        $imageUrl = trim($imageUrl);
+        $validated = Validator::make(
+            ['image_url' => $imageUrl],
+            ['image_url' => ['required', 'url:https', 'max:2048']],
+        )->passes();
+
+        if (! $validated) {
+            return null;
+        }
+
+        $url = parse_url($imageUrl);
+        $host = strtolower($url['host'] ?? '');
+
+        if (
+            ($url['scheme'] ?? null) !== 'https'
+            || $host !== 'm.media-amazon.com'
+            || isset($url['user'])
+            || isset($url['pass'])
+            || (isset($url['port']) && $url['port'] !== 443)
+        ) {
+            return null;
+        }
+
+        return $imageUrl;
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function downloadImage(string $imageUrl, array $context): ?string
+    {
+        try {
+            $response = Http::connectTimeout(3)
+                ->timeout(12)
+                ->withoutRedirecting()
+                ->withOptions(['stream' => true])
+                ->get($imageUrl);
+        } catch (ConnectionException $exception) {
+            Log::warning('Scraped product image could not be downloaded', $context + [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        if (! $response->successful()) {
+            Log::warning('Scraped product image request returned an unsuccessful status', $context + [
+                'status' => $response->status(),
+            ]);
+
+            return null;
+        }
+
+        $contentLength = $response->header('Content-Length');
+
+        if (is_numeric($contentLength) && (int) $contentLength > self::MAX_IMAGE_BYTES) {
+            Log::warning('Scraped product image exceeded the maximum file size', $context);
+
+            return null;
+        }
+
+        $contentType = strtolower(trim(explode(';', (string) $response->header('Content-Type'), 2)[0]));
+        $mimeTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+        ];
+
+        if (! array_key_exists($contentType, $mimeTypes)) {
+            Log::warning('Scraped product image has an unsupported content type', $context + [
+                'content_type' => $contentType,
+            ]);
+
+            return null;
+        }
+
+        $stream = $response->toPsrResponse()->getBody();
+        $contents = '';
+
+        try {
+            while (! $stream->eof()) {
+                $chunk = $stream->read(min(8192, self::MAX_IMAGE_BYTES + 1 - strlen($contents)));
+
+                if ($chunk === '') {
+                    break;
+                }
+
+                $contents .= $chunk;
+
+                if (strlen($contents) > self::MAX_IMAGE_BYTES) {
+                    Log::warning('Scraped product image exceeded the maximum file size', $context);
+
+                    return null;
+                }
+            }
+        } catch (RuntimeException $exception) {
+            Log::warning('Scraped product image download was incomplete', $context + [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        $imageInfo = @getimagesizefromstring($contents);
+
+        if (! is_array($imageInfo) || ($imageInfo['mime'] ?? null) !== $contentType) {
+            Log::warning('Scraped product image content is invalid or does not match its content type', $context);
+
+            return null;
+        }
+
+        $path = 'products/images/'.Str::uuid().'.'.$mimeTypes[$contentType];
+
+        try {
+            $stored = Storage::disk('public')->put($path, $contents);
+        } catch (UnableToWriteFile $exception) {
+            Log::warning('Scraped product image could not be stored', $context + [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        if (! $stored) {
+            Log::warning('Scraped product image could not be stored', $context);
+
+            return null;
+        }
+
+        return $path;
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function deleteStoredImage(string $path, array $context): void
+    {
+        try {
+            $deleted = Storage::disk('public')->delete($path);
+        } catch (UnableToDeleteFile $exception) {
+            Log::warning('Unreferenced scraped product image could not be deleted', $context + [
+                'path' => $path,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if (! $deleted) {
+            Log::warning('Unreferenced scraped product image could not be deleted', $context + [
+                'path' => $path,
+            ]);
+        }
     }
 
     private function finishRequest(
