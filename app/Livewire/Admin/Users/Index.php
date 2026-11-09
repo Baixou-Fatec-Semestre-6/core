@@ -13,8 +13,11 @@ use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -31,6 +34,55 @@ class Index extends Component
 
     #[Url(as: 'q')]
     public string $search = '';
+
+    public string $newUserName = '';
+
+    public string $newUserEmail = '';
+
+    public function openCreateUserModal(): void
+    {
+        Gate::authorize('access-admin');
+
+        $this->reset(['newUserName', 'newUserEmail']);
+        $this->resetValidation();
+        $this->dispatch('open-modal', name: 'user-form');
+    }
+
+    public function createUser(
+        SendUserActivation $sendUserActivation,
+        AuditLogger $auditLogger,
+    ): void {
+        Gate::authorize('access-admin');
+
+        $data = $this->validate([
+            'newUserName' => ['required', 'string', 'max:255'],
+            'newUserEmail' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+        ]);
+
+        $user = DB::transaction(function () use ($data, $sendUserActivation): User {
+            $user = new User;
+            $user->name = $data['newUserName'];
+            $user->email = $data['newUserEmail'];
+            $user->password = Str::random(40);
+            $user->role = UserRole::USER;
+            $user->status = UserStatus::PENDING;
+            $user->saveOrFail();
+
+            $sendUserActivation->handle($user);
+
+            return $user;
+        });
+
+        $auditLogger->log(
+            'user.created',
+            "Usuário #{$user->id} cadastrado.",
+            $user,
+        );
+
+        $this->reset(['newUserName', 'newUserEmail']);
+        $this->dispatch('close-modal', name: 'user-form');
+        session()->flash('status', "Usuário {$user->name} cadastrado. Um e-mail de ativação foi enviado.");
+    }
 
     public function updatedSearch(): void
     {

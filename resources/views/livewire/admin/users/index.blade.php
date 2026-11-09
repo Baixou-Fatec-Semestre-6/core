@@ -1,4 +1,3 @@
-@use('Illuminate\Support\Facades\Route')
 @use('App\Enums\UserStatus')
 
 <div class="space-y-4">
@@ -13,13 +12,24 @@
             class="w-full sm:w-72"
         />
 
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
             <span wire:loading.delay wire:target="search" class="text-xs font-mono text-neutral-400">
                 Buscando…
             </span>
-            <span class="text-xs font-mono text-neutral-400">
-                Total: {{ number_format($users->total(), 0, ',', '.') }} {{ $this->search === '' ? 'contas cadastradas' : 'contas encontradas' }}
-            </span>
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="text-xs font-mono text-neutral-400">
+                    Total: {{ number_format($users->total(), 0, ',', '.') }} {{ $this->search === '' ? 'contas cadastradas' : 'contas encontradas' }}
+                </span>
+                <x-admin.button
+                    wire:click="openCreateUserModal"
+                    wire:loading.attr="disabled"
+                    wire:target="openCreateUserModal"
+                    icon="plus"
+                    class="shrink-0"
+                >
+                    Criar Usuário
+                </x-admin.button>
+            </div>
         </div>
     </x-admin.card>
 
@@ -105,10 +115,50 @@
             </x-slot:footer>
         @endif
     </x-admin.table>
-</div>
+<x-admin.modal name="user-form" title="Cadastrar Usuário" icon="users">
+    <form wire:submit="createUser" class="space-y-3.5 p-5 text-xs">
+        <div>
+            <label for="new-user-name" class="mb-1 block font-bold text-neutral-300">Nome completo</label>
+            <x-admin.input
+                id="new-user-name"
+                wire:model="newUserName"
+                type="text"
+                required
+                autocomplete="name"
+                class="w-full"
+            />
+            @error('newUserName')
+                <p role="alert" class="mt-1 text-red-400">{{ $message }}</p>
+            @enderror
+        </div>
 
-@push('header-actions')
-    @if (Route::has('admin.products.create'))
-        <x-admin.button :href="route('admin.products.create')" icon="plus">Novo Produto</x-admin.button>
-    @endif
-@endpush
+        <div>
+            <label for="new-user-email" class="mb-1 block font-bold text-neutral-300">E-mail</label>
+            <x-admin.input
+                id="new-user-email"
+                wire:model="newUserEmail"
+                type="email"
+                required
+                autocomplete="email"
+                class="w-full"
+            />
+            @error('newUserEmail')
+                <p role="alert" class="mt-1 text-red-400">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <p class="rounded border border-neutral-700 bg-neutral-800/50 p-3 text-neutral-300">
+            O usuário receberá um e-mail para ativar a conta e definir a senha.
+        </p>
+
+        <div class="flex justify-end gap-2 pt-2">
+            <x-admin.button type="button" variant="secondary" x-on:click="$dispatch('close-modal', 'user-form')">
+                Cancelar
+            </x-admin.button>
+            <x-admin.button type="submit" wire:loading.attr="disabled" wire:target="createUser">
+                Criar Usuário
+            </x-admin.button>
+        </div>
+    </form>
+</x-admin.modal>
+</div>
