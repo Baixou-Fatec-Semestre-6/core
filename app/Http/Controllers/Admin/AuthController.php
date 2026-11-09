@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ForgotPasswordRequest;
-use App\Http\Requests\Admin\LoginRequest;
 use App\Http\Requests\Admin\ResetPasswordRequest;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,44 +23,6 @@ class AuthController extends Controller
     public function __construct()
     {
         //
-    }
-
-    /**
-     * Login page
-     */
-    public function showLogin(Request $request): View
-    {
-        return view('auth.login');
-
-    }
-
-    /**
-     * Handle login request
-     */
-    public function login(LoginRequest $request): RedirectResponse
-    {
-        $credentials = $request->only('email', 'password');
-
-        // Add a closure to handle complex/array-based column conditions
-        $attempted = Auth::attempt(
-            array_merge($credentials, [
-                fn (Builder $query) => $query->whereIn('role', [
-                    UserRole::ADMIN,
-                    UserRole::SUPER_ADMIN,
-                ]),
-            ]),
-            $request->filled('remember')
-        );
-
-        if (! $attempted) {
-            return back()->withErrors([
-                'email' => 'As credenciais fornecidas são inválidas ou você não tem permissão.',
-            ])->onlyInput('email');
-        }
-
-        $request->session()->regenerate();
-
-        return redirect()->intended(route('admin.dashboard'));
     }
 
     /**

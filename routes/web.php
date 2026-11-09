@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AuthController;
 use App\Livewire\Admin\Admins;
 use App\Livewire\Admin\Audit;
+use App\Livewire\Admin\Auth\Login;
 use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\Monitoring;
 use App\Livewire\Admin\Products;
@@ -14,8 +15,7 @@ Route::name('admin.')->group(function () {
 
     // 1. Guest Authentication Routes
     Route::middleware('guest')->group(function () {
-        Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-        Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+        Route::get('/login', Login::class)->name('login');
 
         Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])
             ->name('password.request');
@@ -36,7 +36,7 @@ Route::name('admin.')->group(function () {
         Route::get('/', Dashboard\Index::class)->name('dashboard');
 
         // Logout
-        Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+        Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
         // // Products Management (CRUD + Toggle Monitoring)
         Route::get('products', Products\Index::class)->name('products.index');
