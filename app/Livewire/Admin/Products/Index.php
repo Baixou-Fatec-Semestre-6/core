@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Admin\Products;
 
 use App\Enums\ProductListingStatus;
+use App\Enums\ScrapeRequestStatus;
 use App\Models\Product;
 use App\Models\ProductListing;
 use App\Models\Store;
@@ -253,14 +254,20 @@ final class Index extends Component
             ->whereHas('product')
             ->findOrFail($listingId);
 
-        if ($listing->status === ProductListingStatus::FAILED) {
-            $scrapeDispatcher->retry($listing);
-            $auditAction = 'scrape.retry_requested';
-            $message = "Nova tentativa de scraping solicitada para o anúncio #{$listing->id}.";
-        } elseif (! $scrapeDispatcher->requestIfDue($listing)) {
-            session()->flash('status', "Anúncio #{$listing->id} já tem uma solicitação de scraping recente.");
+        $isRetry = $listing->status === ProductListingStatus::FAILED;
+        $wasPublished = $isRetry
+            ? $scrapeDispatcher->retry($listing)
+            : $scrapeDispatcher->requestIfDue($listing);
+
+        if (! $wasPublished) {
+            session()->flash('status', "Anúncio #{$listing->id} já tem uma solicitação de scraping pendente.");
 
             return;
+        }
+
+        if ($isRetry) {
+            $auditAction = 'scrape.retry_requested';
+            $message = "Nova tentativa de scraping solicitada para o anúncio #{$listing->id}.";
         } else {
             $auditAction = 'scrape.manual_requested';
             $message = "Solicitação de scraping enviada para o anúncio #{$listing->id}.";
@@ -289,6 +296,7 @@ final class Index extends Component
                 'min:1',
             ],
         ];
+        $listingRowMessages = [];
 
         foreach ($stores as $store) {
             $path = $this->listingRows[$store->id]['path'] ?? null;
@@ -305,6 +313,8 @@ final class Index extends Component
             $listingRowRules["listingRows.{$store->id}.current_price"] = $hasPath
                 ? ['required', 'numeric', 'min:0', 'max:99999999.99']
                 : ['nullable'];
+            $listingRowMessages["listingRows.{$store->id}.current_price.required"] =
+                "Informe o preço do anúncio da loja {$store->name}.";
         }
 
         $validated = $this->validate([
@@ -312,7 +322,7 @@ final class Index extends Component
             'imageUrl' => filled($this->imageUrl) ? ['url:http,https', 'max:255'] : ['nullable'],
             'currency' => ['required', 'regex:/^[A-Z]{3}$/'],
             ...$listingRowRules,
-        ]);
+        ], $listingRowMessages);
 
         $listingRowsWithPath = array_filter(
             $validated['listingRows'],
@@ -393,7 +403,12 @@ final class Index extends Component
                 $existingListing = $existingListings->get((int) $storeId);
 
                 if ($existingListing === null) {
-                    $product->listings()->create($listingAttributes);
+                    $listing = $product->listings()->create($listingAttributes);
+                    $listing->priceHistories()->create([
+                        'price' => $listing->current_price,
+                        'currency' => $listing->currency,
+                        'scraped_at' => now(),
+                    ]);
                 } else {
                     $existingListing->update($listingAttributes);
                 }
@@ -456,6 +471,13 @@ final class Index extends Component
 
         $listings = ProductListing::query()
             ->with(['product', 'storeRecord'])
+            ->withExists([
+                'scrapeRequests as scrape_request_pending' => fn (Builder $query) => $query
+                    ->whereIn('status', [
+                        ScrapeRequestStatus::DISPATCHING,
+                        ScrapeRequestStatus::QUEUED,
+                    ]),
+            ])
             ->whereHas('product')
             ->when($searchTerm !== '', function (Builder $query) use ($searchTerm): void {
                 $like = '%'.addcslashes($searchTerm, '%_\\').'%';
@@ -498,6 +520,13 @@ final class Index extends Component
                         'priceHistories' => fn ($query) => $query
                             ->orderByDesc('scraped_at')
                             ->limit(20),
+                    ])
+                    ->withExists([
+                        'scrapeRequests as scrape_request_pending' => fn (Builder $query) => $query
+                            ->whereIn('status', [
+                                ScrapeRequestStatus::DISPATCHING,
+                                ScrapeRequestStatus::QUEUED,
+                            ]),
                     ])
                     ->whereHas('product')
                     ->findOrFail($this->selectedListingId),

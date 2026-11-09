@@ -56,7 +56,7 @@
             @php
     $isTracking = $listing->product->track_price;
     $listingNeedsRetry = $listing->status === \App\Enums\ProductListingStatus::FAILED;
-    $scrapeWasRecentlyRequested = $listing->scrape_requested_at?->isAfter(now()->subMinutes(10)) ?? false;
+    $scrapeIsPending = $listing->scrape_request_pending;
     $currencyLabel = $listing->currency === 'BRL' ? 'R$' : $listing->currency;
             @endphp
             <tr wire:key="listing-{{ $listing->id }}" class="hover:bg-neutral-800/50">
@@ -130,13 +130,13 @@
                             wire:click="requestScrape({{ $listing->id }})"
                             wire:loading.attr="disabled"
                             wire:target="requestScrape({{ $listing->id }})"
-                            :disabled="$scrapeWasRecentlyRequested && ! $listingNeedsRetry"
+                            :disabled="$scrapeIsPending"
                             class="whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            @if ($listingNeedsRetry)
-                                Tentar novamente
-                            @elseif ($scrapeWasRecentlyRequested)
+                            @if ($scrapeIsPending)
                                 Na fila
+                            @elseif ($listingNeedsRetry)
+                                Tentar novamente
                             @else
                                 Solicitar scrape
                             @endif
@@ -168,7 +168,7 @@
         \App\Enums\ProductListingStatus::FAILED => ['label' => 'Falha', 'variant' => 'pending'],
         \App\Enums\ProductListingStatus::PENDING => ['label' => 'Pendente', 'variant' => 'muted'],
     };
-    $selectedScrapeWasRequested = $selectedListing->scrape_requested_at?->isAfter(now()->subMinutes(10)) ?? false;
+    $selectedScrapeIsPending = $selectedListing->scrape_request_pending;
     $selectedUrlScheme = strtolower((string) parse_url($selectedListing->url, PHP_URL_SCHEME));
             @endphp
 
@@ -251,7 +251,7 @@
                             <span class="font-bold {{ $selectedListing->product->track_price ? 'text-yellow-400' : 'text-neutral-400' }}">
                                 @if (! $selectedListing->product->track_price)
                                     Pausado
-                                @elseif ($selectedScrapeWasRequested)
+                                @elseif ($selectedScrapeIsPending)
                                     Na fila
                                 @elseif ($nextScrapeAt === null)
                                     —
@@ -329,7 +329,7 @@
         name="create-product"
         :title="$editingProductId === null ? 'Cadastrar Produto' : 'Editar Produto'"
         :icon="$editingProductId === null ? 'plus' : null"
-        max-width="max-w-2xl"
+        max-width="max-w-4xl"
         class="max-h-[90vh] flex flex-col"
     >
         <form wire:submit="saveProduct" class="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
@@ -389,62 +389,71 @@
 
                     <div class="max-h-[35vh] space-y-3 overflow-y-auto overscroll-contain pr-2">
                         @foreach ($stores as $availableStore)
-                                                    @php
-                            $row = $listingRows[$availableStore->id] ?? ['path' => '', 'current_price' => ''];
-                                                    @endphp
-                                                    <div
-                                                        wire:key="product-listing-row-{{ $editingProductId ?? 'new' }}-{{ $availableStore->id }}"
-                                                        class="grid grid-cols-1 items-start gap-3 rounded-lg border border-neutral-800 bg-neutral-800/40 p-3 lg:grid-cols-[minmax(8rem,0.6fr)_minmax(12rem,1.4fr)_8rem]"
-                                                    >
-                                                        <div>
-                                                            <span class="block text-xs font-semibold text-neutral-200">{{ $availableStore->name }}</span>
-                                                        </div>
+                                                                            @php
+    $row = $listingRows[$availableStore->id] ?? ['path' => '', 'current_price' => ''];
+                                                                            @endphp
+                                                                            <div
+                                                                                wire:key="product-listing-row-{{ $editingProductId ?? 'new' }}-{{ $availableStore->id }}"
+                                                                                class="grid grid-cols-1 items-start gap-3 rounded-lg border border-neutral-800 bg-neutral-800/40 p-3 lg:grid-cols-[minmax(8rem,0.6fr)_minmax(12rem,1.4fr)_8rem]"
+                                                                            >
+                                                                                <div>
+                                                                                    <span class="block text-xs font-semibold text-neutral-200">{{ $availableStore->name }}</span>
+                                                                                </div>
 
-                                                        <div class="min-w-0">
-                                                            <x-admin.label for="listing-path-{{ $availableStore->id }}">URL do anúncio</x-admin.label>
-                                                            <div class="flex min-w-0 items-center overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900 focus-within:border-yellow-400">
-                                                                <span class="max-w-[45%] truncate border-r border-neutral-700 px-2 py-2 font-mono text-[11px] text-neutral-400">
-                                                                    {{ rtrim($availableStore->base_url, '/') }}/
-                                                                </span>
-                                                                <input
-                                                                    id="listing-path-{{ $availableStore->id }}"
-                                                                    type="text"
-                                                                    wire:model="listingRows.{{ $availableStore->id }}.path"
-                                                                    placeholder="caminho/do/produto"
-                                                                    autocomplete="off"
-                                                                    aria-label="Caminho do produto na loja {{ $availableStore->name }}"
-                                                                    class="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    wire:click="clearListingRow({{ $availableStore->id }})"
-                                                                    class="inline-flex h-8 w-8 shrink-0 items-center justify-center text-neutral-400 transition-colors hover:text-red-300"
-                                                                    aria-label="Limpar URL e preço de {{ $availableStore->name }}"
-                                                                    title="Limpar URL e preço"
-                                                                >
-                                                                    <span aria-hidden="true">×</span>
-                                                                </button>
-                                                            </div>
-                                                            @error("listingRows.{$availableStore->id}.path")
-                                                                <p role="alert" class="mt-1 text-xs text-red-300">{{ $message }}</p>
-                                                            @enderror
-                                                        </div>
+                                                                                <div class="min-w-0">
+                                                                                    <x-admin.label for="listing-path-{{ $availableStore->id }}">URL do anúncio</x-admin.label>
+                                                                                    <div class="flex min-w-0 items-center overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900 focus-within:border-yellow-400">
+                                                                                        <span class="max-w-[45%] truncate border-r border-neutral-700 px-2 py-2 font-mono text-[11px] text-neutral-400">
+                                                                                            {{ rtrim($availableStore->base_url, '/') }}/
+                                                                                        </span>
+                                                                                        <input
+                                                                                            id="listing-path-{{ $availableStore->id }}"
+                                                                                            type="text"
+                                                                                            wire:model="listingRows.{{ $availableStore->id }}.path"
+                                                                                            x-on:paste.prevent="
+                                                                                                const pastedText = $event.clipboardData.getData('text').trim();
+                                                                                                const storeBaseUrl = @js(rtrim($availableStore->base_url, '/'));
+                                                                                                const path = pastedText.toLowerCase().startsWith(storeBaseUrl.toLowerCase())
+                                                                                                    ? pastedText.slice(storeBaseUrl.length).replace(/^\/+/, '')
+                                                                                                    : pastedText;
+                                                                                                $event.target.value = path;
+                                                                                                $event.target.dispatchEvent(new Event('input', { bubbles: true }));
+                                                                                            "
+                                                                                            placeholder="caminho/do/produto"
+                                                                                            autocomplete="off"
+                                                                                            aria-label="Caminho do produto na loja {{ $availableStore->name }}"
+                                                                                            class="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden"
+                                                                                        />
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            wire:click="clearListingRow({{ $availableStore->id }})"
+                                                                                            class="inline-flex h-8 w-8 shrink-0 items-center justify-center text-neutral-400 transition-colors hover:text-red-300"
+                                                                                            aria-label="Limpar URL e preço de {{ $availableStore->name }}"
+                                                                                            title="Limpar URL e preço"
+                                                                                        >
+                                                                                            <span aria-hidden="true">×</span>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                    @error("listingRows.{$availableStore->id}.path")
+                                                                                        <p role="alert" class="mt-1 text-xs text-red-300">{{ $message }}</p>
+                                                                                    @enderror
+                                                                                </div>
 
-                                                        <div>
-                                                            <x-admin.label for="listing-price-{{ $availableStore->id }}">Preço (R$)</x-admin.label>
-                                                            <x-admin.input
-                                                                id="listing-price-{{ $availableStore->id }}"
-                                                                type="number"
-                                                                step="0.01"
-                                                                min="0"
-                                                                wire:model="listingRows.{{ $availableStore->id }}.current_price"
-                                                                class="w-full"
-                                                            />
-                                                            @error("listingRows.{$availableStore->id}.current_price")
-                                                                <p role="alert" class="mt-1 text-xs text-red-300">{{ $message }}</p>
-                                                            @enderror
-                                                        </div>
-                                                    </div>
+                                                                                <div>
+                                                                                    <x-admin.label for="listing-price-{{ $availableStore->id }}">Preço (R$)</x-admin.label>
+                                                                                    <x-admin.input
+                                                                                        id="listing-price-{{ $availableStore->id }}"
+                                                                                        type="number"
+                                                                                        step="0.01"
+                                                                                        min="0"
+                                                                                        wire:model="listingRows.{{ $availableStore->id }}.current_price"
+                                                                                        class="w-full"
+                                                                                    />
+                                                                                    @error("listingRows.{$availableStore->id}.current_price")
+                                                                                        <p role="alert" class="mt-1 text-xs text-red-300">{{ $message }}</p>
+                                                                                    @enderror
+                                                                                </div>
+                                                                            </div>
                         @endforeach
                     </div>
                 </section>

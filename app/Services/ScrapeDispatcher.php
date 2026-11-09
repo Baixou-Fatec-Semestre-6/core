@@ -3,14 +3,15 @@
 namespace App\Services;
 
 use App\Enums\ProductListingStatus;
+use App\Enums\ScrapeRequestStatus;
 use App\Models\ProductListing;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Throwable;
 
 /** Publishes scrape requests for product listings. */
 class ScrapeDispatcher
 {
-    public const MAX_ATTEMPTS = 3;
-
     /**
      * Create a dispatcher using the given message publisher.
      *
@@ -30,9 +31,7 @@ class ScrapeDispatcher
         ProductListing::query()
             ->whereHas('product.monitors')
             ->whereHas('product', fn ($query) => $query->where('track_price', true))
-            ->where(fn ($query) => $query
-                ->where('status', '!=', ProductListingStatus::FAILED->value)
-                ->orWhere('scrape_attempts', '<', self::MAX_ATTEMPTS))
+            ->where('status', '!=', ProductListingStatus::FAILED->value)
             ->where(fn ($q) => $q->whereNull('last_scraped_at')
                 ->orWhere('last_scraped_at', '<', now()->subHour()))
             ->chunkById(200, function ($listings) use (&$count): void {
@@ -47,7 +46,7 @@ class ScrapeDispatcher
     }
 
     /**
-     * Publish a request if the listing has not been requested within the cooldown.
+     * Publish a request when no active request exists for the listing.
      *
      * Also used immediately after a user starts tracking a product.
      *
@@ -56,48 +55,98 @@ class ScrapeDispatcher
      */
     public function requestIfDue(ProductListing $listing): bool
     {
-        if (
-            $listing->status === ProductListingStatus::FAILED
-            && $listing->scrape_attempts >= self::MAX_ATTEMPTS
-        ) {
-            return false;
-        }
-
-        if (
-            $listing->scrape_requested_at !== null
-            && $listing->scrape_requested_at->gte(now()->subMinutes(10))
-        ) {
-            return false;
-        }
-
-        $this->publishRequest($listing);
-
-        return true;
+        return $this->publishRequest($listing);
     }
 
     /**
-     * Restart a failed listing's retry cycle immediately.
+     * Retry a failed listing when it has no active request.
+     *
+     * @return bool Whether a request was published.
      */
-    public function retry(ProductListing $listing): void
+    public function retry(ProductListing $listing): bool
     {
-        $this->publishRequest($listing, resetAttempts: true);
+        return $this->requestIfDue($listing);
     }
 
-    private function publishRequest(ProductListing $listing, bool $resetAttempts = false): void
+    private function hasActiveRequest(ProductListing $listing): bool
     {
-        $this->publisher->publish('scrape.requested', [
-            'request_id' => (string) Str::uuid(),
-            'listing_id' => $listing->id,
-            'url' => $listing->url,
-            'store' => $listing->store,
-            'requested_at' => now()->toIso8601String(),
-        ]);
+        return $listing->scrapeRequests()
+            ->whereIn('status', [
+                ScrapeRequestStatus::DISPATCHING,
+                ScrapeRequestStatus::QUEUED,
+            ])
+            ->exists();
+    }
 
-        $listing->forceFill([
-            'scrape_requested_at' => now(),
-            'scrape_attempts' => ($resetAttempts ? 0 : $listing->scrape_attempts) + 1,
-            'status' => ProductListingStatus::PENDING,
-            'last_error_reason' => null,
-        ])->saveQuietly();
+    private function publishRequest(ProductListing $listing): bool
+    {
+        $requestedAt = now();
+        $requestId = (string) Str::uuid();
+        $scrapeRequest = DB::transaction(function () use ($listing, $requestId, $requestedAt) {
+            $lockedListing = ProductListing::query()
+                ->lockForUpdate()
+                ->findOrFail($listing->id);
+
+            if ($this->hasActiveRequest($lockedListing)) {
+                return null;
+            }
+
+            $lockedListing->loadMissing('product');
+
+            return $lockedListing->scrapeRequests()->create([
+                'request_id' => $requestId,
+                'product_name' => $lockedListing->product->name,
+                'store' => $lockedListing->store,
+                'listing_url' => $lockedListing->url,
+                'status' => ScrapeRequestStatus::DISPATCHING,
+                'requested_at' => $requestedAt,
+            ]);
+        });
+
+        if ($scrapeRequest === null) {
+            return false;
+        }
+
+        try {
+            $this->publisher->publish('scrape.requested', [
+                'request_id' => $requestId,
+                'listing_id' => $listing->id,
+                'url' => $listing->url,
+                'store' => $listing->store,
+                'requested_at' => $requestedAt->toIso8601String(),
+            ]);
+        } catch (Throwable $exception) {
+            $scrapeRequest->newQuery()
+                ->whereKey($scrapeRequest->id)
+                ->where('status', ScrapeRequestStatus::DISPATCHING)
+                ->update([
+                    'status' => ScrapeRequestStatus::DISPATCH_FAILED,
+                    'completed_at' => now(),
+                    'error_reason' => $exception->getMessage(),
+                    'updated_at' => now(),
+                ]);
+
+            throw $exception;
+        }
+
+        $scrapeRequest->newQuery()
+            ->whereKey($scrapeRequest->id)
+            ->where('status', ScrapeRequestStatus::DISPATCHING)
+            ->update([
+                'status' => ScrapeRequestStatus::QUEUED,
+                'updated_at' => now(),
+            ]);
+
+        ProductListing::query()
+            ->whereKey($listing->id)
+            ->where(fn ($query) => $query
+                ->whereNull('last_scraped_at')
+                ->orWhere('last_scraped_at', '<', $requestedAt))
+            ->update([
+                'status' => ProductListingStatus::PENDING,
+                'last_error_reason' => null,
+            ]);
+
+        return true;
     }
 }

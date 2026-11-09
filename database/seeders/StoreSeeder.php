@@ -14,8 +14,6 @@ class StoreSeeder extends Seeder
     {
         foreach ([
             ['name' => 'Amazon', 'base_url' => 'https://www.amazon.com.br'],
-            ['name' => 'Zoom', 'base_url' => 'https://www.zoom.com.br'],
-            ['name' => 'KaBuM!', 'base_url' => 'https://www.kabum.com.br'],
         ] as $storeData) {
             Store::query()->firstOrCreate(
                 ['name' => $storeData['name']],

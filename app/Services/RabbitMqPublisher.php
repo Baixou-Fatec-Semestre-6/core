@@ -5,6 +5,7 @@ namespace App\Services;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
+use RuntimeException;
 
 /**
  * Publishes JSON messages to RabbitMQ.
@@ -12,13 +13,14 @@ use PhpAmqpLib\Message\AMQPMessage;
 class RabbitMqPublisher
 {
     private ?AMQPStreamConnection $connection = null;
+
     private ?AMQPChannel $channel = null;
 
     /**
      * Publish a persistent JSON message using the given routing key.
      *
-     * @param string $routingKey The message routing key.
-     * @param array  $payload    The data to encode as JSON.
+     * @param  string  $routingKey  The message routing key.
+     * @param  array  $payload  The data to encode as JSON.
      *
      * @throws \JsonException If the payload cannot be encoded as JSON.
      */
@@ -29,7 +31,9 @@ class RabbitMqPublisher
             'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT, // survives broker restart
         ]);
 
-        $this->channel()->basic_publish($message, config('rabbitmq.exchange'), $routingKey);
+        $channel = $this->channel();
+        $channel->basic_publish($message, config('rabbitmq.exchange'), $routingKey, mandatory: true);
+        $channel->wait_for_pending_acks_returns(5);
     }
 
     /**
@@ -45,6 +49,14 @@ class RabbitMqPublisher
                 config('rabbitmq.password'),
             );
             $this->channel = $this->connection->channel();
+            $this->channel->confirm_select();
+            $this->channel->set_return_listener(
+                function (int $replyCode, string $replyText, string $exchange, string $routingKey): void {
+                    throw new RuntimeException(
+                        "RabbitMQ returned an unroutable message ({$replyCode}): {$replyText} ({$exchange}:{$routingKey}).",
+                    );
+                },
+            );
         }
 
         return $this->channel;

@@ -50,7 +50,6 @@ class PriceService
                 'status' => ProductListingStatus::SCRAPED,
                 'last_error_reason' => null,
                 'last_scraped_at' => $scrapedAt,
-                'scrape_attempts' => 0,
             ]);
 
             $listing->priceHistories()->create([

@@ -33,8 +33,8 @@
             />
             <x-admin.stat
                 label="Falhas de Scraping"
-                :value="number_format($metrics['failedListings'], 0, ',', '.')"
-                hint="Anúncios com coleta em falha"
+                :value="number_format($metrics['failedRequests'], 0, ',', '.')"
+                hint="Solicitações de scraping com erro"
                 tone="danger"
             />
         </div>
@@ -88,30 +88,31 @@
                     <h2 class="text-xs font-bold uppercase tracking-wider text-red-400">
                         Falhas de scraping recentes
                     </h2>
-                    <p class="mt-1 text-[11px] text-neutral-400">Anúncios que precisam de atenção</p>
+                    <p class="mt-1 text-[11px] text-neutral-400">Solicitações que precisam de atenção</p>
                 </div>
                 <x-admin.badge variant="count-danger">
-                    {{ number_format($metrics['failedListings'], 0, ',', '.') }}
+                    {{ number_format($metrics['failedRequests'], 0, ',', '.') }}
                 </x-admin.badge>
             </div>
 
             <div class="space-y-3">
-                @forelse ($recentFailedListings as $listing)
+                @forelse ($recentFailedRequests as $scrapeRequest)
                     <article
-                        wire:key="failed-listing-{{ $listing->id }}"
+                        wire:key="failed-scrape-request-{{ $scrapeRequest->id }}"
                         class="rounded-lg border border-red-500/30 bg-red-500/10 p-3"
                     >
                         <span class="block font-mono text-[10px] font-bold uppercase text-red-300">
-                            Anúncio #{{ $listing->id }} <span aria-hidden="true">·</span> {{ $listing->store }}
+                            Solicitação {{ substr($scrapeRequest->request_id, 0, 8) }}
+                            <span aria-hidden="true">·</span> {{ $scrapeRequest->store }}
                         </span>
                         <h3 class="mt-1 text-xs font-bold text-neutral-100">
-                            {{ $listing->product->name }}
+                            {{ $scrapeRequest->product_name }}
                         </h3>
                         <p class="mt-1 text-[11px] text-red-300">
-                            Erro: {{ $listing->last_error_reason ?: 'Nenhum detalhe registrado.' }}
+                            Erro: {{ $scrapeRequest->error_reason ?: 'Nenhum detalhe registrado.' }}
                         </p>
                         <p class="mt-1 font-mono text-[10px] text-neutral-400">
-                            Atualizado em {{ $listing->updated_at?->format('d/m/Y H:i') }}
+                            Atualizado em {{ $scrapeRequest->completed_at?->format('d/m/Y H:i') }}
                         </p>
                     </article>
                 @empty

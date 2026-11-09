@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin\Dashboard;
 
-use App\Enums\ProductListingStatus;
+use App\Enums\ScrapeRequestStatus;
 use App\Enums\UserRole;
 use App\Models\Alert;
 use App\Models\PriceHistory;
 use App\Models\Product;
-use App\Models\ProductListing;
 use App\Models\ProductMonitor;
+use App\Models\ScrapeRequest;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
@@ -48,9 +48,8 @@ final class Index extends Component
                     ->whereHas('listing.product')
                     ->where('scraped_at', '>=', $last24Hours)
                     ->count(),
-                'failedListings' => ProductListing::query()
-                    ->whereHas('product')
-                    ->where('status', ProductListingStatus::FAILED->value)
+                'failedRequests' => ScrapeRequest::query()
+                    ->where('status', ScrapeRequestStatus::FAILED)
                     ->count(),
             ],
             'recentPriceUpdates' => PriceHistory::query()
@@ -59,11 +58,10 @@ final class Index extends Component
                 ->latest('scraped_at')
                 ->limit(5)
                 ->get(),
-            'recentFailedListings' => ProductListing::query()
-                ->with('product')
-                ->whereHas('product')
-                ->where('status', ProductListingStatus::FAILED->value)
-                ->latest('updated_at')
+            'recentFailedRequests' => ScrapeRequest::query()
+                ->where('status', ScrapeRequestStatus::FAILED)
+                ->latest('completed_at')
+                ->latest('id')
                 ->limit(5)
                 ->get(),
         ]);
