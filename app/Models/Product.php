@@ -23,7 +23,7 @@ class Product extends Model
     protected function imageUrl(): Attribute
     {
         return Attribute::get(fn (): ?string => filled($this->image_path)
-            ? Storage::disk('public')->url($this->image_path)
+            ? Storage::url($this->image_path)
             : $this->image_source_url);
     }
 

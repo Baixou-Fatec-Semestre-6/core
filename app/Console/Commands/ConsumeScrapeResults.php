@@ -341,7 +341,7 @@ class ConsumeScrapeResults extends Command
         $path = 'products/images/'.Str::uuid().'.'.$mimeTypes[$contentType];
 
         try {
-            $stored = Storage::disk('public')->put($path, $contents);
+            $stored = Storage::put($path, $contents);
         } catch (UnableToWriteFile $exception) {
             Log::warning('Scraped product image could not be stored', $context + [
                 'error' => $exception->getMessage(),
@@ -365,7 +365,7 @@ class ConsumeScrapeResults extends Command
     private function deleteStoredImage(string $path, array $context): void
     {
         try {
-            $deleted = Storage::disk('public')->delete($path);
+            $deleted = Storage::delete($path);
         } catch (UnableToDeleteFile $exception) {
             Log::warning('Unreferenced scraped product image could not be deleted', $context + [
                 'path' => $path,

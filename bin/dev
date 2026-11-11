@@ -2,48 +2,51 @@
 set -e
 
 COMPOSE_FILE="docker/docker-compose.yml"
+ENV_FILE=".env"
+
+dc() {
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+}
 
 case "$1" in
-  up)
-    docker compose -f "$COMPOSE_FILE" up -d "${@:2}"
-    ;;
-  down)
-    docker compose -f "$COMPOSE_FILE" down "${@:2}"
-    ;;
-  restart)
-    docker compose -f "$COMPOSE_FILE" restart "${@:2}"
-    ;;
-  logs)
-    docker compose -f "$COMPOSE_FILE" logs -f "${@:2}"
-    ;;
-  sh)
-    docker compose -f "$COMPOSE_FILE" exec app sh
-    ;;
-  artisan)
-    docker compose -f "$COMPOSE_FILE" exec app php artisan "${@:2}"
-    ;;
+  up)       dc up -d "${@:2}" ;;
+  down)     dc down "${@:2}" ;;
+  restart)  dc restart "${@:2}" ;;
+  logs)     dc logs -f "${@:2}" ;;
+  sh)       dc exec app sh ;;
+  artisan)  dc exec app php artisan "${@:2}" ;;
   setup)
     echo "Compilando e iniciando os serviços..."
-    docker compose -f "$COMPOSE_FILE" up -d --build
-    
+    dc up -d --build
+
     echo "Aguardando o container core_app iniciar..."
     until [ "$(docker inspect -f '{{.State.Running}}' core_app 2>/dev/null)" = "true" ]; do
         sleep 1
     done
-    
+
     echo "Gerando chave da aplicação..."
-    docker compose -f "$COMPOSE_FILE" exec app php artisan key:generate --ansi
-    
+    if ! grep -qE '^APP_KEY=.+' "$ENV_FILE"; then
+      KEY=$(dc exec -T app php artisan key:generate --show | tr -d '\r')
+      if grep -q '^APP_KEY=' "$ENV_FILE"; then
+        sed -i "s|^APP_KEY=.*|APP_KEY=${KEY}|" "$ENV_FILE"
+      else
+        echo "APP_KEY=${KEY}" >> "$ENV_FILE"
+      fi
+      dc up -d app queue-worker scheduler rabbitmq-consumer
+    fi
+
     echo "Executando migrações do banco de dados..."
-    docker compose -f "$COMPOSE_FILE" exec app php artisan migrate --force
+    dc exec app php artisan migrate --force
 
     echo "Executando seeders..."
-    docker compose -f "$COMPOSE_FILE" exec app php artisan db:seed
-    
+    dc exec app php artisan db:seed
+
+    echo "Criando link simbólico para o diretório de armazenamento..."
+    dc exec app php artisan storage:link --relative
+
     echo "Configuração completa!"
     ;;
   *)
-    # fallback: pass through anything else straight to compose
-    docker compose -f "$COMPOSE_FILE" "$@"
+    dc "$@"
     ;;
 esac
