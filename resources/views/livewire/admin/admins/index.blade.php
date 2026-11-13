@@ -198,7 +198,8 @@
             @if ($editingAdminId === null)
                 <label
                     class="flex cursor-pointer items-center gap-2 rounded border border-neutral-700 bg-neutral-800/50 p-3">
-                    <input type="checkbox" wire:model="sendResetLink" class="rounded border-neutral-700 text-yellow-400">
+                    <input type="checkbox" wire:model="sendResetLinkOnCreate"
+                        class="rounded border-neutral-700 text-yellow-400">
                     <span class="font-semibold text-neutral-200">Enviar e-mail para criação de senha</span>
                 </label>
             @endif

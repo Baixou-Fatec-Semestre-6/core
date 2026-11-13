@@ -58,7 +58,7 @@ final class Index extends Component
 
     public string $adminStatus = 'pending';
 
-    public bool $sendResetLink = true;
+    public bool $sendResetLinkOnCreate = true;
 
     // ---------------------------------------------------------------------
     // Lifecycle
@@ -95,7 +95,7 @@ final class Index extends Component
         $this->adminEmail = $admin->email;
         $this->adminRole = $admin->role->value;
         $this->adminStatus = $admin->status->value;
-        $this->sendResetLink = false;
+        $this->sendResetLinkOnCreate = false;
 
         $this->resetValidation();
         $this->dispatch('open-modal', name: 'admin-form');
@@ -141,7 +141,7 @@ final class Index extends Component
             $sendUserActivation->handle($admin);
         }
 
-        if ($isNew && $this->sendResetLink) {
+        if ($isNew && $this->sendResetLinkOnCreate) {
             Password::sendResetLink(['email' => $admin->email]);
         }
 
@@ -382,7 +382,7 @@ final class Index extends Component
             'adminEmail',
             'adminRole',
             'adminStatus',
-            'sendResetLink',
+            'sendResetLinkOnCreate',
             'editingAdminId',
         ]);
         $this->resetValidation();
