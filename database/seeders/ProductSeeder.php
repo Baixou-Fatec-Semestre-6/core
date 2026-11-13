@@ -59,6 +59,8 @@ class ProductSeeder extends Seeder
                     'product_id' => $product->id,
                     'store_id' => $store->id,
                     ...$listingData,
+                    'status' => 'scraped',
+                    'last_scraped_at' => now()->subDay(),
                 ]);
 
                 $basePrice = $listingData['current_price'];
