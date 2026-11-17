@@ -3,6 +3,8 @@ x-shared-app: &shared-app
     context: ..
     dockerfile: docker/Dockerfile
   working_dir: /var/www
+  env_file:
+    - ../.env
   environment:
     - APP_URL=${APP_URL:-http://localhost:8000}
     - DB_CONNECTION=${DB_CONNECTION:-pgsql}
@@ -162,17 +164,17 @@ services:
         http://rabbitmq:15672/api/definitions
 
   # Python scrapper
-  scrapper:
-    build: https://github.com/Baixou-Fatec-Semestre-6/scrapping.git#feat/scrapping-rabbitmq-validacoes
-    container_name: scrapper
-    restart: unless-stopped
-    environment:
-      RABBITMQ_URL: amqp://baixou_app:local_dev_password@rabbitmq:5672/%2F
-    networks:
-      - core
-    depends_on:
-      rabbitmq-definitions:
-        condition: service_completed_successfully
+  # scrapper:
+  #   build: https://github.com/Baixou-Fatec-Semestre-6/scrapping.git#feat/scrapping-rabbitmq-validacoes
+  #   container_name: scrapper
+  #   restart: unless-stopped
+  #   environment:
+  #     RABBITMQ_URL: amqp://${RABBITMQ_USER:-baixou_app}:${RABBITMQ_PASSWORD:-local_dev_password}@rabbitmq:5672/%2F
+  #   networks:
+  #     - core
+  #   depends_on:
+  #     rabbitmq-definitions:
+  #       condition: service_completed_successfully
 
   # Mailpit service for capturing emails sent by the application during development
   mailpit:

@@ -1,9 +1,8 @@
 #!/bin/bash
 set -e
 
-# Verificar se o diretório vendor existe, se não, executar composer install
-if [ ! -d "vendor" ]; then
-    echo "Diretório vendor não encontrado. Instalando dependências..."
+# Verificar se o arquivo vendor/autoload.php existe, se não, executar composer install
+if [ ! -f "vendor/autoload.php" ]; then
     composer install --no-interaction
 fi
 

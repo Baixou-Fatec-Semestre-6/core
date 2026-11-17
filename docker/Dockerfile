@@ -1,4 +1,4 @@
-FROM php:8.2.29-fpm
+FROM php:8.4-fpm
 
 # Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
