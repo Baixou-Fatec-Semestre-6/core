@@ -6,7 +6,7 @@
   ],
   "exchanges": [
     {
-      "name": "scrape_commands",
+      "name": "baixou",
       "vhost": "/",
       "type": "topic",
       "durable": true,
@@ -15,7 +15,7 @@
       "arguments": {}
     },
     {
-      "name": "price_events",
+      "name": "baixou.retry",
       "vhost": "/",
       "type": "topic",
       "durable": true,
@@ -24,16 +24,7 @@
       "arguments": {}
     },
     {
-      "name": "scrape_commands.retry",
-      "vhost": "/",
-      "type": "topic",
-      "durable": true,
-      "auto_delete": false,
-      "internal": false,
-      "arguments": {}
-    },
-    {
-      "name": "scrape_commands.dlx",
+      "name": "baixou.dlx",
       "vhost": "/",
       "type": "topic",
       "durable": true,
@@ -44,28 +35,25 @@
   ],
   "queues": [
     {
-      "name": "scrape_requests",
+      "name": "scraper.requests",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
-      "arguments": {
-        "x-dead-letter-exchange": "scrape_commands.dlx",
-        "x-dead-letter-routing-key": "scrape.dead"
-      }
+      "arguments": {}
     },
     {
-      "name": "scrape_requests.retry",
+      "name": "scraper.requests.retry",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
       "arguments": {
-        "x-dead-letter-exchange": "scrape_commands",
+        "x-dead-letter-exchange": "baixou",
         "x-dead-letter-routing-key": "scrape.requested",
         "x-message-ttl": 30000
       }
     },
     {
-      "name": "scrape_requests.dlq",
+      "name": "scraper.requests.dlq",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
@@ -81,44 +69,57 @@
   ],
   "bindings": [
     {
-      "source": "scrape_commands",
+      "source": "baixou",
       "vhost": "/",
-      "destination": "scrape_requests",
+      "destination": "scraper.requests",
       "destination_type": "queue",
       "routing_key": "scrape.requested",
       "arguments": {}
     },
     {
-      "source": "scrape_commands.retry",
+      "source": "baixou.retry",
       "vhost": "/",
-      "destination": "scrape_requests.retry",
+      "destination": "scraper.requests.retry",
       "destination_type": "queue",
       "routing_key": "scrape.requested",
       "arguments": {}
     },
     {
-      "source": "scrape_commands.dlx",
+      "source": "baixou.dlx",
       "vhost": "/",
-      "destination": "scrape_requests.dlq",
+      "destination": "scraper.requests.dlq",
       "destination_type": "queue",
       "routing_key": "scrape.dead",
       "arguments": {}
     },
     {
-      "source": "price_events",
+      "source": "baixou",
       "vhost": "/",
       "destination": "core.scrape.results",
       "destination_type": "queue",
-      "routing_key": "price.scraped",
+      "routing_key": "scrape.completed",
       "arguments": {}
     },
     {
-      "source": "price_events",
+      "source": "baixou",
       "vhost": "/",
       "destination": "core.scrape.results",
       "destination_type": "queue",
-      "routing_key": "price.failed",
+      "routing_key": "scrape.failed",
       "arguments": {}
+    }
+  ],
+  "policies": [
+    {
+      "name": "scraper-requests-dead-letter",
+      "vhost": "/",
+      "pattern": "^scraper\\.requests$",
+      "apply-to": "queues",
+      "definition": {
+        "dead-letter-exchange": "baixou.dlx",
+        "dead-letter-routing-key": "scrape.dead"
+      },
+      "priority": 0
     }
   ]
 }

@@ -96,18 +96,18 @@ class ConsumeScrapeResults extends Command
         $routingKey = $message->delivery_info['routing_key'];
 
         $context = [
-            'request_id' => $data['request_id'] ?? null,
+            'event_id' => $data['event_id'] ?? null,
             'listing_id' => $data['listing_id'] ?? null,
             'routing_key' => $routingKey,
         ];
 
         $resultStatus = match ($routingKey) {
-            'price.scraped' => ScrapeRequestStatus::SUCCEEDED,
-            'price.failed' => ScrapeRequestStatus::FAILED,
+            'scrape.completed' => ScrapeRequestStatus::SUCCEEDED,
+            'scrape.failed' => ScrapeRequestStatus::FAILED,
             default => throw new \UnexpectedValueException("Unknown routing key: {$routingKey}"),
         };
-        $scrapeRequest = isset($data['request_id'])
-            ? ScrapeRequest::query()->where('request_id', $data['request_id'])->first()
+        $scrapeRequest = isset($data['event_id'])
+            ? ScrapeRequest::query()->where('request_id', $data['event_id'])->first()
             : null;
 
         if ($scrapeRequest !== null && in_array($scrapeRequest->status, [
@@ -411,12 +411,12 @@ class ConsumeScrapeResults extends Command
         try {
             $data = json_decode($message->getBody(), true, flags: JSON_THROW_ON_ERROR);
 
-            if (! isset($data['request_id'])) {
+            if (! isset($data['event_id'])) {
                 return;
             }
 
             $scrapeRequest = ScrapeRequest::query()
-                ->where('request_id', $data['request_id'])
+                ->where('request_id', $data['event_id'])
                 ->first();
 
             $this->finishRequest(

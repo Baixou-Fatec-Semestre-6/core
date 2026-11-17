@@ -109,7 +109,7 @@ class ScrapeDispatcher
 
         try {
             $this->publisher->publish('scrape.requested', [
-                'request_id' => $requestId,
+                'event_id' => $requestId,
                 'listing_id' => $listing->id,
                 'url' => $listing->url,
                 'store' => $listing->store,

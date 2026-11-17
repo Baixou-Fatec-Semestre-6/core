@@ -7,6 +7,6 @@ return [
     'port' => env('RABBITMQ_PORT', 5672),
     'user' => env('RABBITMQ_USER', 'guest'),
     'password' => env('RABBITMQ_PASSWORD', 'guest'),
-    'exchange' => env('RABBITMQ_EXCHANGE_COMMANDS', 'scrape_commands'),
+    'exchange' => env('RABBITMQ_EXCHANGE', 'baixou'),
     'results_queue' => 'core.scrape.results',
 ];
