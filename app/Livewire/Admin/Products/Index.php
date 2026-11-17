@@ -169,7 +169,7 @@ final class Index extends Component
 
         $this->editingProductId = $product->id;
         $this->productName = $product->name;
-        $this->imageUrl = $product->image_source_url ?? '';
+        $this->imageUrl = $product->image_url ?? '';
         $this->currency = $product->listings->first()?->currency ?? 'BRL';
         $this->listingRows = $stores
             ->mapWithKeys(function (Store $store) use ($product): array {
@@ -376,10 +376,7 @@ final class Index extends Component
                     ->findOrFail($this->editingProductId);
                 $product->update([
                     'name' => $validated['productName'],
-                    'image_source_url' => $validated['imageUrl'] ?: null,
-                    'image_path' => $validated['imageUrl'] === $product->image_source_url
-                        ? $product->image_path
-                        : null,
+                    'image_url' => $validated['imageUrl'] ?: null,
                 ]);
                 $existingListings = $product->listings()
                     ->whereIn('store_id', $storeIds)
@@ -389,7 +386,7 @@ final class Index extends Component
             } else {
                 $product = Product::query()->create([
                     'name' => $validated['productName'],
-                    'image_source_url' => $validated['imageUrl'] ?: null,
+                    'image_url' => $validated['imageUrl'] ?: null,
                 ]);
                 $existingListings = collect();
             }

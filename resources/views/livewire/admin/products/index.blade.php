@@ -177,7 +177,7 @@
                     <h4 class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
                         Informações do Produto
                     </h4>
-
+                    
                     <div class="grid grid-cols-1 items-center gap-4 sm:grid-cols-[8rem_minmax(0,1fr)]">
                         <div class="flex h-32 w-32 items-center justify-center overflow-hidden rounded-lg border border-neutral-800 bg-neutral-800/50">
                             @if (filled($selectedListing->product->image_url))
