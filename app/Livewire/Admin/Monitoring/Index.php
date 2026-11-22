@@ -141,14 +141,14 @@ final class Index extends Component
             ->when($this->status !== '', fn (Builder $query) => $query
                 ->where('status', $this->status))
             ->when($term !== '', function (Builder $query) use ($term): void {
-                $like = '%'.addcslashes($term, '%_\\').'%';
+                $like = '%'.addcslashes(mb_strtolower($term), '%_\\').'%';
 
                 $query->where(fn (Builder $query) => $query
-                    ->where('request_id', 'like', $like)
-                    ->orWhere('product_name', 'like', $like)
-                    ->orWhere('store', 'like', $like)
-                    ->orWhere('listing_url', 'like', $like)
-                    ->orWhere('error_reason', 'like', $like));
+                    ->whereRaw('LOWER(CAST(request_id AS TEXT)) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(product_name) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(store) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(listing_url) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(error_reason) LIKE ?', [$like]));
             })
             ->when($this->fromDate !== '', fn (Builder $query) => $query
                 ->where('requested_at', '>=', Carbon::parse($this->fromDate)->startOfDay()))

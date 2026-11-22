@@ -273,11 +273,11 @@ final class Index extends Component
 
         return $this->adminsQuery()
             ->when($term !== '', function (Builder $query) use ($term): void {
-                $like = '%'.addcslashes($term, '%_\\').'%';
+                $like = '%'.addcslashes(mb_strtolower($term), '%_\\').'%';
 
                 $query->where(fn (Builder $q) => $q
-                    ->where('name', 'like', $like)
-                    ->orWhere('email', 'like', $like));
+                    ->whereRaw('LOWER(name) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(email) LIKE ?', [$like]));
             })
             ->when($this->role !== '', fn (Builder $query) => $query->where('role', $this->role))
             ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status));

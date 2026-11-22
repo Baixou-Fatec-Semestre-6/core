@@ -153,11 +153,11 @@ class Index extends Component
                 'productMonitors' => fn (Builder $query) => $query->whereHas('alerts'),
             ])
             ->when($term !== '', function (Builder $query) use ($term): void {
-                $like = '%'.addcslashes($term, '%_\\').'%';
+                $like = '%'.addcslashes(mb_strtolower($term), '%_\\').'%';
 
                 $query->where(fn (Builder $q) => $q
-                    ->where('name', 'like', $like)
-                    ->orWhere('email', 'like', $like));
+                    ->whereRaw('LOWER(name) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(email) LIKE ?', [$like]));
             })
             ->latest()
             ->paginate(self::PER_PAGE);

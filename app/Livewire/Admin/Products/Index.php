@@ -496,14 +496,14 @@ final class Index extends Component
             ])
             ->whereHas('product')
             ->when($searchTerm !== '', function (Builder $query) use ($searchTerm): void {
-                $like = '%'.addcslashes($searchTerm, '%_\\').'%';
+                $like = '%'.addcslashes(mb_strtolower($searchTerm), '%_\\').'%';
 
                 $query->where(function (Builder $query) use ($like): void {
                     $query
-                        ->whereHas('product', fn (Builder $productQuery) => $productQuery->where('name', 'like', $like))
-                        ->orWhereHas('storeRecord', fn (Builder $storeQuery) => $storeQuery->where('name', 'like', $like))
-                        ->orWhere('store', 'like', $like)
-                        ->orWhere('url', 'like', $like);
+                        ->whereHas('product', fn (Builder $productQuery) => $productQuery->whereRaw('LOWER(name) LIKE ?', [$like]))
+                        ->orWhereHas('storeRecord', fn (Builder $storeQuery) => $storeQuery->whereRaw('LOWER(name) LIKE ?', [$like]))
+                        ->orWhereRaw('LOWER(store) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(url) LIKE ?', [$like]);
                 });
             })
             ->when($this->store !== '', fn (Builder $query) => $query->where('store_id', $this->store))
