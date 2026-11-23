@@ -1,4 +1,5 @@
 x-shared-app: &shared-app
+  image: core-app:latest
   build:
     context: ..
     dockerfile: docker/Dockerfile
@@ -12,16 +13,16 @@ x-shared-app: &shared-app
     - DB_PORT=${DB_PORT:-5432}
     - DB_DATABASE=${DB_DATABASE:-baixou}
     - DB_USERNAME=${DB_USERNAME:-dev}
-    - DB_PASSWORD=${DB_PASSWORD:-123}
+    - DB_PASSWORD=${DB_PASSWORD:-11223344}
     - MONGO_DB_DATABASE=${MONGO_DB_DATABASE:-baixou}
-    - MONGO_DB_URI=mongodb://${MONGO_DB_USERNAME:-dev}:${MONGO_DB_PASSWORD:-123}@mongodb:27017/${MONGO_DB_DATABASE:-baixou}?authSource=admin
+    - MONGO_DB_URI=mongodb://${MONGO_DB_USERNAME:-dev}:${MONGO_DB_PASSWORD:-11223344}@mongodb:27017/${MONGO_DB_DATABASE:-baixou}?authSource=admin
     - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
     - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
     - RABBITMQ_USER=${RABBITMQ_USER:-baixou_app}
-    - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-local_dev_password}
+    - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-11223344}
     - LOG_CHANNEL=stderr
   volumes:
-    - ../:/var/www
+    - app_storage:/var/www/storage
   networks:
     - core
   depends_on:
@@ -34,7 +35,7 @@ services:
     container_name: core_app
     restart: unless-stopped
     volumes:
-      - ../:/var/www
+      - app_storage:/var/www/storage
       - ./php-fpm/zz-docker.conf:/usr/local/etc/php-fpm.d/zz-docker.conf
       - ./php-fpm/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
     extra_hosts:
@@ -96,7 +97,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_DATABASE:-baixou}
       POSTGRES_USER: ${DB_USERNAME:-dev}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-123}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-11223344}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -111,7 +112,7 @@ services:
     environment:
       MONGO_INITDB_DATABASE: ${MONGO_DB_DATABASE:-baixou}
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USERNAME:-dev}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD:-123}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD:-11223344}
     volumes:
       - mongodb_data:/data/db
     networks:
@@ -126,7 +127,7 @@ services:
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-baixou_app}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-local_dev_password}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-11223344}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
@@ -147,7 +148,7 @@ services:
         condition: service_healthy
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-baixou_app}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-local_dev_password}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-11223344}
     volumes:
       - ./rabbitmq/definitions.json:/definitions.json:ro
     networks:
@@ -164,17 +165,17 @@ services:
         http://rabbitmq:15672/api/definitions
 
   # Python scrapper
-  # scrapper:
-  #   build: https://github.com/Baixou-Fatec-Semestre-6/scrapping.git#feat/scrapping-rabbitmq-validacoes
-  #   container_name: scrapper
-  #   restart: unless-stopped
-  #   environment:
-  #     RABBITMQ_URL: amqp://${RABBITMQ_USER:-baixou_app}:${RABBITMQ_PASSWORD:-local_dev_password}@rabbitmq:5672/%2F
-  #   networks:
-  #     - core
-  #   depends_on:
-  #     rabbitmq-definitions:
-  #       condition: service_completed_successfully
+  scrapper:
+    build: https://github.com/Baixou-Fatec-Semestre-6/scrapping.git#main
+    container_name: scrapper
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-baixou_app}:${RABBITMQ_PASSWORD:-11223344}@rabbitmq:5672/%2F
+    networks:
+      - core
+    depends_on:
+      rabbitmq-definitions:
+        condition: service_completed_successfully
 
   # Mailpit service for capturing emails sent by the application during development
   mailpit:
@@ -192,6 +193,7 @@ networks:
     driver: bridge
 
 volumes:
+  app_storage:
   postgres_data:
   rabbitmq_data:
   mongodb_data:
